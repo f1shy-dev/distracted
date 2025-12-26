@@ -21,7 +21,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || (github.event_name == 'push' && github.ref || '') }}
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2
@@ -52,7 +52,7 @@ jobs:
       - name: create release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || (github.event_name == 'push' && github.ref_name || '') }}
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: distacted-chrome-mv3.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
