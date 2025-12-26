@@ -1,0 +1,48 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: blacksmith-2vcpu-ubuntu-2404-arm
+    
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: cache bun
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: build extension
+        run: bun run build
+
+      - name: create zip artifact
+        run: |
+          cd .output/chrome-mv3
+          zip -r ../../distacted-chrome-mv3.zip .
+
+      - name: create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: distacted-chrome-mv3.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
