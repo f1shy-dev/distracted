@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import {
   getBlockedSites,
   updateBlockedSite,
+  addBlockedSite,
   getStats,
   getSettings,
   type BlockedSite,
