@@ -215,9 +215,8 @@ export default function BlockedPage() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center p-4 dark"
+      className="min-h-screen w-full flex items-center justify-center p-4 dark bg-background"
       style={{
-        backgroundColor: "hsl(var(--background))",
         fontFamily:
           "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
