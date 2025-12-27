@@ -158,7 +158,12 @@ export function urlMatchesPattern(url: string, pattern: string): boolean {
     const hostname = urlObj.hostname.toLowerCase();
     const pathname = urlObj.pathname.toLowerCase();
     const fullPath = hostname + pathname;
-    const normalizedPattern = pattern.toLowerCase().trim();
+    
+    // Normalize pattern: strip protocol if accidentally included
+    let normalizedPattern = pattern.toLowerCase().trim();
+    normalizedPattern = normalizedPattern
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "");
 
     // Handle path patterns (e.g., "x.com/messages")
     if (normalizedPattern.includes("/")) {
