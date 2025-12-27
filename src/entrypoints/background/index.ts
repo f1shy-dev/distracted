@@ -8,7 +8,7 @@ import * as webRequest from "./blockers/webRequest";
 import { isInternalUrl } from "./utils";
 
 const isMV3 = import.meta.env.MANIFEST_VERSION === 3;
-console.log(`[distacted] background entry`, {
+console.log(`[distracted] background entry`, {
   isMV3,
 });
 
@@ -30,20 +30,20 @@ async function getUnlockState(
 }
 
 export default defineBackground(() => {
-  console.log("[distacted] Background script initialized");
+  console.log("[distracted] Background script initialized");
 
   (async () => {
     if (isMV3) await dnr.initializeDnr();
     else await webRequest.initializeWebRequest();
   })().catch((err) => {
-    console.error("[distacted] Failed to initialize blocker:", err);
+    console.error("[distracted] Failed to initialize blocker:", err);
   });
 
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes.blockedSites) {
-      console.log("[distacted] Blocked sites changed, syncing rules");
+      console.log("[distracted] Blocked sites changed, syncing rules");
       syncRules().catch((err) => {
-        console.error("[distacted] Failed to sync rules:", err);
+        console.error("[distracted] Failed to sync rules:", err);
       });
     }
   });
@@ -65,9 +65,9 @@ export default defineBackground(() => {
           `/blocked.html?url=${encodeURIComponent(tab.url)}&siteId=${encodeURIComponent(siteId)}`
         );
         await browser.tabs.update(tabId, { url: blockedPageUrl });
-        console.log(`[distacted] Redirected tab ${tabId} after relock`);
+        console.log(`[distracted] Redirected tab ${tabId} after relock`);
       } catch (err) {
-        console.log(`[distacted] Could not redirect tab ${tabId}:`, err);
+        console.log(`[distracted] Could not redirect tab ${tabId}:`, err);
       }
     }
   });
@@ -81,7 +81,7 @@ export default defineBackground(() => {
     const unlocked = await isSiteUnlocked(site.id);
     if (unlocked) return;
 
-    console.log(`[distacted] Blocking (${source}): ${url}`);
+    console.log(`[distracted] Blocking (${source}): ${url}`);
 
     const blockedPageUrl = browser.runtime.getURL(
       `/blocked.html?url=${encodeURIComponent(url)}&siteId=${encodeURIComponent(site.id)}`
@@ -90,7 +90,7 @@ export default defineBackground(() => {
     try {
       await browser.tabs.update(tabId, { url: blockedPageUrl });
     } catch (err) {
-      console.error("[distacted] Failed to redirect to blocked page:", err);
+      console.error("[distracted] Failed to redirect to blocked page:", err);
     }
   }
 
@@ -261,7 +261,7 @@ export default defineBackground(() => {
             sendResponse({ error: "Unknown message type" });
         }
       } catch (error) {
-        console.error("[distacted] Message handler error:", error);
+        console.error("[distracted] Message handler error:", error);
         sendResponse({ error: String(error) });
       }
     })();

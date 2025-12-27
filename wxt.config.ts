@@ -28,7 +28,7 @@ export default defineConfig({
     const hostPermissions = isFirefox ? ["<all_urls>"] : [];
 
     return {
-      name: "distacted",
+      name: "distracted",
       description:
         "blocks distracting websites! do mini tasks to get back on them...",
       permissions,

@@ -58,7 +58,7 @@ export async function initializeWebRequest(): Promise<void> {
           if (tabId && tabId !== -1) {
             browser.tabs.update(tabId, { url: blockedPageUrl }).catch((err) => {
               console.error(
-                `[distacted] Failed to redirect tab ${tabId}:`,
+                `[distracted] Failed to redirect tab ${tabId}:`,
                 err
               );
             });

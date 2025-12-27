@@ -444,7 +444,7 @@ export default function App() {
           )}
           <IconClockHour5Filled className="size-5 text-primary" />
           <h1 className="text-lg font-bold tracking-tight">
-            {view === "main" && "distacted"}
+            {view === "main" && "distracted"}
             {view === "add" && "Block Site"}
             {view === "edit" && "Edit Block"}
             {view === "stats" && "Statistics"}
@@ -766,7 +766,7 @@ export default function App() {
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground">
-                  distacted helps you stay focused by blocking distracting
+                  distracted helps you stay focused by blocking distracting
                   websites. All data is stored locally and never leaves your
                   device.
                 </p>

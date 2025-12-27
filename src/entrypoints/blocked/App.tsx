@@ -80,7 +80,7 @@ export default function BlockedPage() {
           window.location.href = url;
         }
       } catch (err) {
-        console.error("[distacted] Error getting site info:", err);
+        console.error("[distracted] Error getting site info:", err);
         setError("Failed to load blocking info");
       }
 
@@ -154,7 +154,7 @@ export default function BlockedPage() {
         setUnlocking(false);
       }
     } catch (err) {
-      console.error("[distacted] Error unlocking:", err);
+      console.error("[distracted] Error unlocking:", err);
       setError("Failed to unlock site");
       setUnlocking(false);
     }

@@ -122,7 +122,7 @@ export async function syncDnrRules(): Promise<void> {
   });
 
   console.log(
-    `[distacted] DNR rules synced: ${newRules.length} rules for ${sites.filter((s) => s.enabled).length} sites`
+    `[distracted] DNR rules synced: ${newRules.length} rules for ${sites.filter((s) => s.enabled).length} sites`
   );
 }
 
@@ -146,7 +146,7 @@ export async function grantAccess(
   });
 
   console.log(
-    `[distacted] Granted access to site ${siteId} for ${durationMinutes ?? 60} minutes`
+    `[distracted] Granted access to site ${siteId} for ${durationMinutes ?? 60} minutes`
   );
 
   return { expiresAt };
@@ -159,7 +159,7 @@ export async function revokeAccess(siteId: string): Promise<number[]> {
   const tabsToRedirect = await findTabsOnBlockedSite(siteId);
 
   console.log(
-    `[distacted] Revoked access to site ${siteId}, ${tabsToRedirect.length} tabs to redirect`
+    `[distracted] Revoked access to site ${siteId}, ${tabsToRedirect.length} tabs to redirect`
   );
 
   return tabsToRedirect;
@@ -227,7 +227,7 @@ export async function handleRelockAlarm(alarmName: string): Promise<{
   if (!alarmName.startsWith(ALARM_PREFIX)) return null;
 
   const siteId = alarmName.slice(ALARM_PREFIX.length);
-  console.log(`[distacted] Relock alarm fired for site ${siteId}`);
+  console.log(`[distracted] Relock alarm fired for site ${siteId}`);
 
   const tabsToRedirect = await revokeAccess(siteId);
   return { siteId, tabsToRedirect };
