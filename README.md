@@ -30,6 +30,17 @@ yes! you could also just not install it! there is only so many layers of annoyan
 - (for windows), add another step to the uninstall process [by using registry options](https://www.thewindowsclub.com/prevent-uninstallation-of-chrome-extensions)
 </details>
 
+## how to install
+
+1. download the latest release from [releases](https://github.com/f1shy-dev/distracted/releases)
+2. unzip the file
+3. load it in your browser:
+   - **chrome/chromium-based browsers:** go to `chrome://extensions/`, enable "developer mode", click "load unpacked", select the unzipped folder
+   - **firefox/firefox-based browsers:** go to `about:debugging`, click "this firefox", click "load temporary add-on", select the `manifest.json` file from the unzipped folder
+4. done! configure which sites to block in the extension popup
+
+chrome web store and firefox add-ons store submissions are in progress - for now, manual installation is required.
+
 ## how to build
 
 ### environment
