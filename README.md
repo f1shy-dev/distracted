@@ -30,12 +30,39 @@ yes! you could also just not install it! there is only so many layers of annoyan
 - (for windows), add another step to the uninstall process [by using registry options](https://www.thewindowsclub.com/prevent-uninstallation-of-chrome-extensions)
 </details>
 
-## how to (re)build
+## how to build
 
-```bash
-bun install
-bun run zip
-bun run zip:firefox
-# ./output/distracted-<version>-<chrome|firefox>.zip
-```
+### environment
+* **operating system:** Ubuntu 24.04 LTS (or compatible Linux distribution)  
+* **package manager:** Bun 1.3.6 or later
+* **node.js:** v25.2.1 or later (required by Bun)
 
+### instructions
+
+1. install bun (if not already installed):
+   ```bash
+   curl -fsSL https://bun.sh/install | bash
+   ```
+   or follow the official installation guide: https://bun.sh/docs/installation
+
+2. verify bun installation:
+   ```bash
+   bun --version
+   # should output: 1.3.6 or later
+   ```
+
+3. install project dependencies, and build the extension:
+   ```bash
+   bun install --frozen-lockfile
+   bun run zip # for chrome
+   bun run zip:firefox # for firefox
+   ```
+
+4. outputs (for release or inspection/review):
+   - chrome:
+     - `.output/chrome-mv3/`
+     - `.output/distracted-<version>-chrome.zip`
+   - firefox:
+     - `.output/firefox-mv2/`
+     - `.output/distracted-<version>-firefox.zip`
+     - `.output/distracted-<version>-sources.zip`
