@@ -15,12 +15,14 @@ import {
   type Settings,
   type UnlockMethod,
   type PatternRule,
+  type Schedule,
 } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   IconPlus,
   IconTrash,
@@ -131,9 +133,8 @@ const SiteItem = memo(function SiteItem({
 
   return (
     <div
-      className={`group p-3 rounded-lg transition-all ${
-        site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
-      }`}
+      className={`group p-3 rounded-lg transition-all ${site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
+        }`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -206,14 +207,18 @@ const SiteItem = memo(function SiteItem({
 const StatItem = memo(function StatItem({
   stat,
   site,
+  maxTime,
 }: {
   stat: SiteStats;
   site: BlockedSite | undefined;
+  maxTime: number;
 }) {
   const passRate =
     stat.visitCount > 0
       ? Math.round((stat.passedCount / stat.visitCount) * 100)
       : 0;
+
+  const timePercent = maxTime > 0 ? (stat.timeSpentMs / maxTime) * 100 : 0;
 
   return (
     <div className="p-3 rounded-lg bg-muted/30">
@@ -237,8 +242,23 @@ const StatItem = memo(function StatItem({
           </div>
           <div className="text-xs text-muted-foreground">Time Wasted</div>
         </div>
+
+        {/* Visual Bar */}
+        <div className="mt-3 space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wider">
+            <span>Time Wasted</span>
+            <span>{timePercent.toFixed(0)}% of max</span>
+          </div>
+          <div className="h-2 bg-background/50 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary/70 rounded-full"
+              style={{ width: `${timePercent}%` }}
+            />
+          </div>
+        </div>
       </div>
     </div>
+
   );
 });
 
@@ -257,20 +277,33 @@ export default function App() {
   ]);
   const [formMethod, setFormMethod] = useState<UnlockMethod>("timer");
   const [formDuration, setFormDuration] = useState("10");
+
   const [formAutoRelock, setFormAutoRelock] = useState(
     String(DEFAULT_AUTO_RELOCK)
   );
+  const [formStrict, setFormStrict] = useState(false);
+  const [formSchedule, setFormSchedule] = useState<Schedule>({
+    enabled: false,
+    days: [1, 2, 3, 4, 5],
+    start: "09:00",
+    end: "17:00",
+  });
 
   const loadData = useCallback(async () => {
-    const [loadedSites, loadedStats, loadedSettings] = await Promise.all([
-      getBlockedSites(),
-      getStats(),
-      getSettings(),
-    ]);
-    setSites(loadedSites);
-    setStats(loadedStats);
-    setSettings(loadedSettings);
-    setLoading(false);
+    try {
+      const [loadedSites, loadedStats, loadedSettings] = await Promise.all([
+        getBlockedSites(),
+        getStats(),
+        getSettings(),
+      ]);
+      setSites(loadedSites);
+      setStats(loadedStats);
+      setSettings(loadedSettings);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -283,6 +316,13 @@ export default function App() {
     setFormMethod("timer");
     setFormDuration("10");
     setFormAutoRelock(String(DEFAULT_AUTO_RELOCK));
+    setFormStrict(false);
+    setFormSchedule({
+      enabled: false,
+      days: [1, 2, 3, 4, 5],
+      start: "09:00",
+      end: "17:00",
+    });
     setEditingSite(null);
   }, []);
 
@@ -319,23 +359,33 @@ export default function App() {
       unlockDuration: parseInt(formDuration) || 10,
       autoRelockAfter: formAutoRelock ? parseInt(formAutoRelock) : null,
       enabled: true,
+      strict: formStrict,
+      schedule: formSchedule,
     };
 
-    if (editingSite) {
-      await updateBlockedSite(editingSite.id, siteData);
-    } else {
-      await addBlockedSite(siteData);
-    }
+    try {
+      if (editingSite) {
+        await updateBlockedSite(editingSite.id, siteData);
+      } else {
+        await addBlockedSite(siteData);
+      }
 
-    resetForm();
-    setView("main");
-    loadData();
+      resetForm();
+      resetForm();
+      setView("main");
+      loadData();
+    } catch (error) {
+      console.error("Failed to save site:", error);
+      alert("Failed to save site. Please check console for details.");
+    }
   }, [
     formName,
     formRules,
     formMethod,
     formDuration,
     formAutoRelock,
+    formStrict,
+    formSchedule,
     editingSite,
     resetForm,
     loadData,
@@ -350,6 +400,15 @@ export default function App() {
     setFormMethod(site.unlockMethod);
     setFormDuration(String(site.unlockDuration));
     setFormAutoRelock(site.autoRelockAfter ? String(site.autoRelockAfter) : "");
+    setFormStrict(!!site.strict);
+    setFormSchedule(
+      site.schedule || {
+        enabled: false,
+        days: [1, 2, 3, 4, 5],
+        start: "09:00",
+        end: "17:00",
+      }
+    );
     setView("edit");
   }, []);
 
@@ -444,6 +503,16 @@ export default function App() {
             <Button
               variant="ghost"
               size="icon-sm"
+              onClick={() => {
+                resetForm();
+                setView("add");
+              }}
+            >
+              <IconPlus className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
               onClick={() => setView("stats")}
             >
               <IconChartBar className="size-4" />
@@ -467,9 +536,20 @@ export default function App() {
               <div className="text-center py-12 text-muted-foreground">
                 <IconShieldLock className="size-12 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">No blocked sites yet</p>
-                <p className="text-xs mt-1">
+                <p className="text-xs mt-1 mb-4">
                   Add your first distraction to block
                 </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetForm();
+                    setView("add");
+                  }}
+                >
+                  <IconPlus className="size-4 mr-2" />
+                  Add Blocked Site
+                </Button>
               </div>
             ) : (
               sites.map((site) => (
@@ -551,18 +631,16 @@ export default function App() {
                         key={method}
                         type="button"
                         onClick={() => setFormMethod(method)}
-                        className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
-                          formMethod === method
-                            ? "bg-primary/15"
-                            : "bg-muted/30 hover:bg-muted/50"
-                        }`}
+                        className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${formMethod === method
+                          ? "bg-primary/15"
+                          : "bg-muted/30 hover:bg-muted/50"
+                          }`}
                       >
                         <div
-                          className={`p-2 rounded-md ${
-                            formMethod === method
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted/50 text-muted-foreground"
-                          }`}
+                          className={`p-2 rounded-md ${formMethod === method
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted/50 text-muted-foreground"
+                            }`}
                         >
                           {info.icon}
                         </div>
@@ -605,6 +683,105 @@ export default function App() {
                   onChange={(e) => setFormAutoRelock(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2 p-3 rounded-lg border border-border/50 bg-muted/20">
+              <Checkbox
+                id="strict"
+                checked={formStrict}
+                onCheckedChange={(c) => setFormStrict(!!c)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="strict"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Strict Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Hide the unlock button (no way to bypass).
+                </p>
+              </div>
+            </div>
+
+
+
+            <div className="space-y-3 pt-2 border-t border-border/30">
+              <div className="flex items-center justify-between">
+                <div className="grid gap-0.5">
+                  <Label>Active Schedule</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Only block during these times
+                  </p>
+                </div>
+                <Checkbox
+                  id="schedule"
+                  checked={formSchedule.enabled}
+                  onCheckedChange={(c) =>
+                    setFormSchedule({ ...formSchedule, enabled: !!c })
+                  }
+                />
+              </div>
+
+              {formSchedule.enabled && (
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+                  <div className="flex justify-between gap-1">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          const newDays = formSchedule.days.includes(i)
+                            ? formSchedule.days.filter((d) => d !== i)
+                            : [...formSchedule.days, i];
+                          setFormSchedule({ ...formSchedule, days: newDays });
+                        }}
+                        className={`size-8 rounded-full text-xs font-medium transition-all ${formSchedule.days.includes(i)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Start Time</Label>
+                      <Input
+                        type="time"
+                        value={formSchedule.start}
+                        onChange={(e) =>
+                          setFormSchedule({
+                            ...formSchedule,
+                            start: e.target.value,
+                          })
+                        }
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">End Time</Label>
+                      <Input
+                        type="time"
+                        value={formSchedule.end}
+                        onChange={(e) =>
+                          setFormSchedule({
+                            ...formSchedule,
+                            end: e.target.value,
+                          })
+                        }
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  {formSchedule.days.length === 0 && (
+                    <p className="text-xs text-destructive">
+                      Please select at least one day.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <Button
@@ -653,13 +830,17 @@ export default function App() {
                 <p className="text-xs mt-1">Visit blocked sites to see data</p>
               </div>
             ) : (
-              stats.map((stat) => (
-                <StatItem
-                  key={stat.siteId}
-                  stat={stat}
-                  site={siteMap.get(stat.siteId)}
-                />
-              ))
+              (() => {
+                const maxTime = Math.max(...stats.map((s) => s.timeSpentMs), 0);
+                return stats.map((stat) => (
+                  <StatItem
+                    key={stat.siteId}
+                    stat={stat}
+                    site={siteMap.get(stat.siteId)}
+                    maxTime={maxTime}
+                  />
+                ));
+              })()
             )}
           </div>
         )}
@@ -717,14 +898,16 @@ export default function App() {
       </div>
 
       {/* Footer - only on main view */}
-      {view === "main" && (
-        <div className="p-4 border-t border-border/30 bg-muted/20">
-          <Button onClick={() => setView("add")} className="w-full">
-            <IconPlus className="size-4" />
-            Block a Website
-          </Button>
-        </div>
-      )}
-    </div>
+      {
+        view === "main" && (
+          <div className="p-4 border-t border-border/30 bg-muted/20">
+            <Button onClick={() => setView("add")} className="w-full">
+              <IconPlus className="size-4" />
+              Block a Website
+            </Button>
+          </div>
+        )
+      }
+    </div >
   );
 }

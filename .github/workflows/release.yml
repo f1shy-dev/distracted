@@ -41,18 +41,16 @@ jobs:
       - name: install dependencies
         run: bun install --frozen-lockfile
 
-      - name: build extension
-        run: bun run build
-
-      - name: create zip artifact
+      - name: build extensions
         run: |
-          cd .output/chrome-mv3
-          zip -r ../../distacted-chrome-mv3.zip .
+          bun run build
+          bun run build:firefox
+          bun run build:opera
 
       - name: create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: distacted-chrome-mv3.zip
+          files: .output/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

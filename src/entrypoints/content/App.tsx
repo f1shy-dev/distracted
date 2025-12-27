@@ -180,13 +180,12 @@ const HoldChallenge = memo(function HoldChallenge({
       <div className="text-center">
         <div className="h-4 bg-muted/20 rounded-full overflow-hidden mb-4">
           <div
-            className={`h-full transition-all duration-100 rounded-full ${
-              holding
-                ? "bg-primary"
-                : elapsed > 0 && !completed
-                  ? "bg-destructive/50"
-                  : "bg-primary"
-            }`}
+            className={`h-full transition-all duration-100 rounded-full ${holding
+              ? "bg-primary"
+              : elapsed > 0 && !completed
+                ? "bg-destructive/50"
+                : "bg-primary"
+              }`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -204,9 +203,8 @@ const HoldChallenge = memo(function HoldChallenge({
             onTouchStart={handleStart}
             onTouchEnd={handleEnd}
             variant={holding ? "default" : "outline"}
-            className={`w-full h-20 text-lg transition-all ${
-              holding ? "scale-95 bg-primary" : ""
-            }`}
+            className={`w-full h-20 text-lg transition-all ${holding ? "scale-95 bg-primary" : ""
+              }`}
             size="lg"
           >
             <IconHandStop className="size-6" />
@@ -284,13 +282,12 @@ const TypeChallenge = memo(function TypeChallenge({
             {targetText.split("").map((char, i) => (
               <span
                 key={i}
-                className={`${
-                  charStatuses[i] === "correct"
-                    ? "text-green-500"
-                    : charStatuses[i] === "incorrect"
-                      ? "text-destructive bg-destructive/20"
-                      : "text-muted-foreground"
-                }`}
+                className={`${charStatuses[i] === "correct"
+                  ? "text-green-500"
+                  : charStatuses[i] === "incorrect"
+                    ? "text-destructive bg-destructive/20"
+                    : "text-muted-foreground"
+                  }`}
               >
                 {char}
               </span>
@@ -480,22 +477,32 @@ export default function BlockingOverlay() {
               </span>
             </div>
 
-            {blockedSite.unlockMethod === "timer" && (
-              <TimerChallenge
-                duration={blockedSite.unlockDuration}
-                onComplete={handleChallengeComplete}
-              />
-            )}
+            {blockedSite.strict ? (
+              <div className="text-center py-8 text-destructive">
+                <IconShieldLock className="size-12 mx-auto mb-2 opacity-50" />
+                <p className="font-bold">No access allowed.</p>
+                <p className="text-sm opacity-80">Strict mode is enabled for this site.</p>
+              </div>
+            ) : (
+              <>
+                {blockedSite.unlockMethod === "timer" && (
+                  <TimerChallenge
+                    duration={blockedSite.unlockDuration}
+                    onComplete={handleChallengeComplete}
+                  />
+                )}
 
-            {blockedSite.unlockMethod === "hold" && (
-              <HoldChallenge
-                duration={blockedSite.unlockDuration}
-                onComplete={handleChallengeComplete}
-              />
-            )}
+                {blockedSite.unlockMethod === "hold" && (
+                  <HoldChallenge
+                    duration={blockedSite.unlockDuration}
+                    onComplete={handleChallengeComplete}
+                  />
+                )}
 
-            {blockedSite.unlockMethod === "type" && (
-              <TypeChallenge onComplete={handleChallengeComplete} />
+                {blockedSite.unlockMethod === "type" && (
+                  <TypeChallenge onComplete={handleChallengeComplete} />
+                )}
+              </>
             )}
           </div>
 
