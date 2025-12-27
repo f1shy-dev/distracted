@@ -30,15 +30,12 @@ export default defineConfig({
     return {
       name: "distacted",
       description:
-        "Block distracting websites with customizable unlock challenges",
+        "blocks distracting websites! do mini tasks to get back on them...",
       permissions,
       host_permissions: hostPermissions,
-      // DNR requires declaring the rule resources for static rules (we use dynamic only)
-      // But we need to declare the permission properly
       ...(isFirefox
         ? {}
         : {
-            // Chrome MV3: allow modifying headers for debugging if needed
             declarative_net_request: {
               rule_resources: [],
             },

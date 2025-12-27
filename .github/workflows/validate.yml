@@ -34,4 +34,6 @@ jobs:
         run: bun run compile
 
       - name: build extension
-        run: bun run build
+        run: |
+          bun run build
+          bun run build:firefox
