@@ -487,14 +487,20 @@ export default function BlockingOverlay() {
               <>
                 {blockedSite.unlockMethod === "timer" && (
                   <TimerChallenge
-                    duration={blockedSite.unlockDuration}
+                    duration={
+                      (blockedSite.challengeSettings as { duration: number })
+                        .duration
+                    }
                     onComplete={handleChallengeComplete}
                   />
                 )}
 
                 {blockedSite.unlockMethod === "hold" && (
                   <HoldChallenge
-                    duration={blockedSite.unlockDuration}
+                    duration={
+                      (blockedSite.challengeSettings as { duration: number })
+                        .duration
+                    }
                     onComplete={handleChallengeComplete}
                   />
                 )}

@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import {
   getBlockedSites,
-  addBlockedSite,
   updateBlockedSite,
-  deleteBlockedSite,
   getStats,
   getSettings,
-  saveSettings,
-  clearStats,
-  formatDuration,
-  DEFAULT_AUTO_RELOCK,
   type BlockedSite,
   type SiteStats,
   type Settings,
@@ -17,6 +11,12 @@ import {
   type PatternRule,
   type Schedule,
 } from "@/lib/storage";
+import { DEFAULT_AUTO_RELOCK } from "@/lib/consts";
+import {
+  CHALLENGES,
+  getDefaultChallengeSettings,
+  type ChallengeSettingsMap,
+} from "@/components/challenges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,42 +30,17 @@ import {
   IconPlayerPlay,
   IconChartBar,
   IconSettings,
-  IconShieldLock,
   IconArrowLeft,
-  IconHandStop,
-  IconClock,
-  IconKeyboard,
   IconRefresh,
   IconEdit,
   IconCheck,
   IconX,
   IconWorld,
+  IconClockHour5Filled,
 } from "@tabler/icons-react";
 
 type View = "main" | "add" | "edit" | "stats" | "settings";
 
-const UNLOCK_METHOD_INFO: Record<
-  UnlockMethod,
-  { label: string; icon: React.ReactNode; description: string }
-> = {
-  timer: {
-    label: "Wait Timer",
-    icon: <IconClock className="size-4" />,
-    description: "Wait for a countdown to finish",
-  },
-  hold: {
-    label: "Hold Button",
-    icon: <IconHandStop className="size-4" />,
-    description: "Hold a button continuously",
-  },
-  type: {
-    label: "Type Text",
-    icon: <IconKeyboard className="size-4" />,
-    description: "Type a random UUID (no copy/paste)",
-  },
-};
-
-// Pattern Rule Editor Component
 const PatternRuleItem = memo(function PatternRuleItem({
   rule,
   onUpdate,
@@ -130,6 +105,19 @@ const SiteItem = memo(function SiteItem({
 }) {
   const blockRules = site.rules.filter((r) => !r.allow);
   const allowRules = site.rules.filter((r) => r.allow);
+  const challenge = CHALLENGES[site.unlockMethod];
+
+  const settingsSummary = useMemo(() => {
+    const settings = site.challengeSettings;
+    const parts: string[] = [];
+    for (const [key, opt] of Object.entries(challenge.options)) {
+      const value = settings[key as keyof typeof settings];
+      if (value !== undefined) {
+        parts.push(`${value}${key === "duration" ? "s" : ""}`);
+      }
+    }
+    return parts.length > 0 ? parts.join(", ") : null;
+  }, [site.challengeSettings, challenge.options]);
 
   return (
     <div
@@ -143,7 +131,7 @@ const SiteItem = memo(function SiteItem({
             variant={site.enabled ? "default" : "secondary"}
             className="text-xs shrink-0"
           >
-            {UNLOCK_METHOD_INFO[site.unlockMethod].label}
+            {challenge.label}
           </Badge>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -192,7 +180,7 @@ const SiteItem = memo(function SiteItem({
       </div>
 
       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-        <span>{site.unlockDuration}s to unlock</span>
+        {settingsSummary && <span>{settingsSummary} to unlock</span>}
         {site.autoRelockAfter && (
           <span className="flex items-center gap-1">
             <IconRefresh className="size-3" />
@@ -238,7 +226,20 @@ const StatItem = memo(function StatItem({
         </div>
         <div>
           <div className="text-lg font-bold text-chart-3">
-            {formatDuration(stat.timeSpentMs)}
+            {(() => {
+              const ms = stat.timeSpentMs;
+              const seconds = Math.floor(ms / 1000);
+              const minutes = Math.floor(seconds / 60);
+              const hours = Math.floor(minutes / 60);
+
+              if (hours > 0) {
+                return `${hours}h ${minutes % 60}m`;
+              }
+              if (minutes > 0) {
+                return `${minutes}m ${seconds % 60}s`;
+              }
+              return `${seconds}s`;
+            })()}
           </div>
           <div className="text-xs text-muted-foreground">Time Wasted</div>
         </div>
@@ -270,14 +271,14 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [editingSite, setEditingSite] = useState<BlockedSite | null>(null);
 
-  // Form state
   const [formName, setFormName] = useState("");
   const [formRules, setFormRules] = useState<PatternRule[]>([
     { pattern: "", allow: false },
   ]);
   const [formMethod, setFormMethod] = useState<UnlockMethod>("timer");
-  const [formDuration, setFormDuration] = useState("10");
-
+  const [formChallengeSettings, setFormChallengeSettings] = useState<
+    ChallengeSettingsMap[UnlockMethod]
+  >(() => getDefaultChallengeSettings("timer"));
   const [formAutoRelock, setFormAutoRelock] = useState(
     String(DEFAULT_AUTO_RELOCK)
   );
@@ -314,7 +315,7 @@ export default function App() {
     setFormName("");
     setFormRules([{ pattern: "", allow: false }]);
     setFormMethod("timer");
-    setFormDuration("10");
+    setFormChallengeSettings(getDefaultChallengeSettings("timer"));
     setFormAutoRelock(String(DEFAULT_AUTO_RELOCK));
     setFormStrict(false);
     setFormSchedule({
@@ -332,7 +333,6 @@ export default function App() {
         type: "GET_CURRENT_TAB_URL",
       });
       if (result.domain) {
-        // Update the first rule or add domain to existing rules
         setFormRules((rules) => {
           if (rules.length === 1 && !rules[0].pattern) {
             return [{ pattern: result.domain, allow: false }];
@@ -356,7 +356,7 @@ export default function App() {
       name: formName.trim(),
       rules: validRules.map((r) => ({ ...r, pattern: r.pattern.trim() })),
       unlockMethod: formMethod,
-      unlockDuration: parseInt(formDuration) || 10,
+      challengeSettings: formChallengeSettings,
       autoRelockAfter: formAutoRelock ? parseInt(formAutoRelock) : null,
       enabled: true,
       strict: formStrict,
@@ -382,7 +382,7 @@ export default function App() {
     formName,
     formRules,
     formMethod,
-    formDuration,
+    formChallengeSettings,
     formAutoRelock,
     formStrict,
     formSchedule,
@@ -398,7 +398,9 @@ export default function App() {
       site.rules.length > 0 ? site.rules : [{ pattern: "", allow: false }]
     );
     setFormMethod(site.unlockMethod);
-    setFormDuration(String(site.unlockDuration));
+    setFormChallengeSettings(
+      site.challengeSettings ?? getDefaultChallengeSettings(site.unlockMethod)
+    );
     setFormAutoRelock(site.autoRelockAfter ? String(site.autoRelockAfter) : "");
     setFormStrict(!!site.strict);
     setFormSchedule(
@@ -422,7 +424,10 @@ export default function App() {
 
   const handleDeleteSite = useCallback(
     async (id: string) => {
-      await deleteBlockedSite(id);
+      const sites = await getBlockedSites();
+      await browser.storage.local.set({
+        ["blockedSites"]: sites.filter((s) => s.id !== id),
+      });
       loadData();
     },
     [loadData]
@@ -430,12 +435,12 @@ export default function App() {
 
   const handleToggleStats = useCallback(async () => {
     const newSettings = { ...settings, statsEnabled: !settings.statsEnabled };
-    await saveSettings(newSettings);
+    await browser.storage.local.set({ ["settings"]: newSettings });
     setSettings(newSettings);
   }, [settings]);
 
   const handleClearStats = useCallback(async () => {
-    await clearStats();
+    await browser.storage.local.set({ ["stats"]: [] });
     loadData();
   }, [loadData]);
 
@@ -481,7 +486,6 @@ export default function App() {
 
   return (
     <div className="w-[400px] h-[520px] bg-background text-foreground flex flex-col overflow-hidden dark">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border/30 bg-muted/30">
         <div className="flex items-center gap-2">
           {view !== "main" && (
@@ -489,9 +493,9 @@ export default function App() {
               <IconArrowLeft className="size-4" />
             </Button>
           )}
-          <IconShieldLock className="size-5 text-primary" />
+          <IconClockHour5Filled className="size-5 text-primary" />
           <h1 className="text-lg font-bold tracking-tight">
-            {view === "main" && "distacted"}
+            {view === "main" && "distracted"}
             {view === "add" && "Block Site"}
             {view === "edit" && "Edit Block"}
             {view === "stats" && "Statistics"}
@@ -528,13 +532,12 @@ export default function App() {
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
         {view === "main" && (
           <div className="space-y-3">
             {sites.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <IconShieldLock className="size-12 mx-auto mb-3 opacity-30" />
+                <IconClockHour5Filled className="size-12 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">No blocked sites yet</p>
                 <p className="text-xs mt-1 mb-4">
                   Add your first distraction to block
@@ -623,66 +626,115 @@ export default function App() {
             <div className="space-y-2">
               <Label>Unlock Method</Label>
               <div className="grid gap-2">
-                {(Object.keys(UNLOCK_METHOD_INFO) as UnlockMethod[]).map(
-                  (method) => {
-                    const info = UNLOCK_METHOD_INFO[method];
-                    return (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => setFormMethod(method)}
-                        className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${formMethod === method
+                {(Object.keys(CHALLENGES) as UnlockMethod[]).map((method) => {
+                  const challenge = CHALLENGES[method];
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => {
+                        setFormMethod(method);
+                        setFormChallengeSettings(
+                          getDefaultChallengeSettings(method)
+                        );
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${formMethod === method
                           ? "bg-primary/15"
                           : "bg-muted/30 hover:bg-muted/50"
-                          }`}
-                      >
-                        <div
-                          className={`p-2 rounded-md ${formMethod === method
+                        }`}
+                    >
+                      <div
+                        className={`p-2 rounded-md ${formMethod === method
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted/50 text-muted-foreground"
-                            }`}
-                        >
-                          {info.icon}
+                          }`}
+                      >
+                        {challenge.icon}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">
+                          {challenge.label}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">
-                            {info.label}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {info.description}
-                          </div>
+                        <div className="text-xs text-muted-foreground">
+                          {challenge.description}
                         </div>
-                      </button>
-                    );
-                  }
-                )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="duration">
-                  {formMethod === "type" ? "Text Length" : "Duration (sec)"}
-                </Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min="1"
-                  value={formDuration}
-                  onChange={(e) => setFormDuration(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="relock">Auto-relock (min)</Label>
-                <Input
-                  id="relock"
-                  type="number"
-                  min="1"
-                  placeholder="Never"
-                  value={formAutoRelock}
-                  onChange={(e) => setFormAutoRelock(e.target.value)}
-                />
-              </div>
+            {(() => {
+              const challenge = CHALLENGES[formMethod];
+              const optionEntries = Object.entries(challenge.options);
+              if (optionEntries.length === 0) return null;
+
+              return (
+                <div className="space-y-3">
+                  <Label>Challenge Options</Label>
+                  <div
+                    className={`grid gap-3 ${optionEntries.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+                  >
+                    {optionEntries.map(([key, opt]) => (
+                      <div key={key} className="space-y-1">
+                        <Label
+                          htmlFor={`option-${key}`}
+                          className="text-xs font-normal text-muted-foreground"
+                        >
+                          {(opt as { label: string }).label}
+                        </Label>
+                        <Input
+                          id={`option-${key}`}
+                          type={
+                            typeof (opt as { default: unknown }).default ===
+                              "number"
+                              ? "number"
+                              : "text"
+                          }
+                          min={
+                            typeof (opt as { default: unknown }).default ===
+                              "number"
+                              ? "1"
+                              : undefined
+                          }
+                          value={String(
+                            formChallengeSettings[
+                            key as keyof typeof formChallengeSettings
+                            ] ?? (opt as { default: unknown }).default
+                          )}
+                          onChange={(e) => {
+                            const value =
+                              typeof (opt as { default: unknown }).default ===
+                                "number"
+                                ? parseInt(e.target.value) || 0
+                                : e.target.value;
+                            setFormChallengeSettings((prev) => ({
+                              ...prev,
+                              [key]: value,
+                            }));
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="space-y-2">
+              <Label htmlFor="relock">Auto-relock (minutes)</Label>
+              <Input
+                id="relock"
+                type="number"
+                min="1"
+                placeholder="Never"
+                value={formAutoRelock}
+                onChange={(e) => setFormAutoRelock(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                How long until the site is blocked again after unlocking
+              </p>
             </div>
 
             <div className="flex items-center space-x-2 p-3 rounded-lg border border-border/50 bg-muted/20">
@@ -887,7 +939,7 @@ export default function App() {
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground">
-                  distacted helps you stay focused by blocking distracting
+                  distracted helps you stay focused by blocking distracting
                   websites. All data is stored locally and never leaves your
                   device.
                 </p>
@@ -897,17 +949,29 @@ export default function App() {
         )}
       </div>
 
-      {/* Footer - only on main view */}
-      {
-        view === "main" && (
-          <div className="p-4 border-t border-border/30 bg-muted/20">
-            <Button onClick={() => setView("add")} className="w-full">
-              <IconPlus className="size-4" />
-              Block a Website
-            </Button>
-          </div>
-        )
-      }
+<<<<<<< HEAD
+  {/* Footer - only on main view */ }
+  {
+    view === "main" && (
+      <div className="p-4 border-t border-border/30 bg-muted/20">
+        <Button onClick={() => setView("add")} className="w-full">
+          <IconPlus className="size-4" />
+          Block a Website
+        </Button>
+      </div>
+    )
+  }
     </div >
+=======
+      {view === "main" && (
+        <div className="p-4 border-t border-border/30 bg-muted/20">
+          <Button onClick={() => setView("add")} className="w-full">
+            <IconPlus className="size-4" />
+            Block a Website
+          </Button>
+        </div>
+      )}
+    </div>
+>>>>>>> upstream/main
   );
 }
