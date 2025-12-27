@@ -639,14 +639,14 @@ export default function App() {
                         );
                       }}
                       className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${formMethod === method
-                          ? "bg-primary/15"
-                          : "bg-muted/30 hover:bg-muted/50"
+                        ? "bg-primary/15"
+                        : "bg-muted/30 hover:bg-muted/50"
                         }`}
                     >
                       <div
                         className={`p-2 rounded-md ${formMethod === method
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted/50 text-muted-foreground"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/50 text-muted-foreground"
                           }`}
                       >
                         {challenge.icon}
@@ -949,20 +949,6 @@ export default function App() {
         )}
       </div>
 
-<<<<<<< HEAD
-  {/* Footer - only on main view */ }
-  {
-    view === "main" && (
-      <div className="p-4 border-t border-border/30 bg-muted/20">
-        <Button onClick={() => setView("add")} className="w-full">
-          <IconPlus className="size-4" />
-          Block a Website
-        </Button>
-      </div>
-    )
-  }
-    </div >
-=======
       {view === "main" && (
         <div className="p-4 border-t border-border/30 bg-muted/20">
           <Button onClick={() => setView("add")} className="w-full">
@@ -972,6 +958,5 @@ export default function App() {
         </div>
       )}
     </div>
->>>>>>> upstream/main
   );
 }
