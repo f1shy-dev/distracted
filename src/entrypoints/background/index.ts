@@ -3,6 +3,7 @@ import {
   getBlockedSites,
   getSettings,
 } from "@/lib/storage";
+import { STORAGE_KEYS } from "@/lib/consts";
 import * as dnr from "./blockers/dnr";
 import * as webRequest from "./blockers/webRequest";
 import { isInternalUrl } from "./utils";
@@ -192,8 +193,8 @@ export default defineBackground(() => {
           case "UPDATE_STATS": {
             const { siteId, update } = message;
             (async () => {
-              const statsResult = await browser.storage.local.get("stats");
-              const stats = (statsResult["stats"] ?? []) as any[];
+              const statsResult = await browser.storage.local.get(STORAGE_KEYS.STATS);
+              const stats = (statsResult[STORAGE_KEYS.STATS] ?? []) as any[];
               let siteStats = stats.find((s) => s.siteId === siteId);
 
               if (!siteStats) {
@@ -212,7 +213,7 @@ export default defineBackground(() => {
               if (update.addTime) siteStats.timeSpentMs += update.addTime;
               siteStats.lastVisit = Date.now();
 
-              await browser.storage.local.set({ stats });
+              await browser.storage.local.set({ [STORAGE_KEYS.STATS]: stats });
             })().catch((err) => console.error("Failed to update stats:", err));
 
             sendResponse({ success: true });

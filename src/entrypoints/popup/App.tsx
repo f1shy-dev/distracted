@@ -4,13 +4,16 @@ import {
   updateBlockedSite,
   getStats,
   getSettings,
+  saveSettings,
   type BlockedSite,
   type SiteStats,
   type Settings,
   type UnlockMethod,
   type PatternRule,
+  type Schedule,
+  saveBlockedSites,
 } from "@/lib/storage";
-import { DEFAULT_AUTO_RELOCK } from "@/lib/consts";
+import { DEFAULT_AUTO_RELOCK, STORAGE_KEYS } from "@/lib/consts";
 import {
   CHALLENGES,
   getDefaultChallengeSettings,
@@ -21,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   IconPlus,
   IconTrash,
@@ -119,9 +123,8 @@ const SiteItem = memo(function SiteItem({
 
   return (
     <div
-      className={`group p-3 rounded-lg transition-all ${
-        site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
-      }`}
+      className={`group p-3 rounded-lg transition-all ${site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
+        }`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -194,9 +197,11 @@ const SiteItem = memo(function SiteItem({
 const StatItem = memo(function StatItem({
   stat,
   site,
+  maxTime,
 }: {
   stat: SiteStats;
   site: BlockedSite | undefined;
+  maxTime: number;
 }) {
   const passRate =
     stat.visitCount > 0
@@ -239,6 +244,27 @@ const StatItem = memo(function StatItem({
           <div className="text-xs text-muted-foreground">Time Wasted</div>
         </div>
       </div>
+
+      {/* Visual Bar */}
+      <div className="mt-3 space-y-1">
+        <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wider">
+          <span>Time Wasted</span>
+          <span>
+            {maxTime > 0
+              ? Math.round((stat.timeSpentMs / maxTime) * 100)
+              : 0}
+            % of max
+          </span>
+        </div>
+        <div className="h-2 bg-background/50 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary/70 rounded-full"
+            style={{
+              width: `${maxTime > 0 ? (stat.timeSpentMs / maxTime) * 100 : 0}%`,
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 });
@@ -262,6 +288,13 @@ export default function App() {
   const [formAutoRelock, setFormAutoRelock] = useState(
     String(DEFAULT_AUTO_RELOCK)
   );
+  const [formStrict, setFormStrict] = useState(false);
+  const [formSchedule, setFormSchedule] = useState<Schedule>({
+    enabled: false,
+    days: [1, 2, 3, 4, 5],
+    start: "09:00",
+    end: "17:00",
+  });
 
   const loadData = useCallback(async () => {
     const [loadedSites, loadedStats, loadedSettings] = await Promise.all([
@@ -285,6 +318,13 @@ export default function App() {
     setFormMethod("timer");
     setFormChallengeSettings(getDefaultChallengeSettings("timer"));
     setFormAutoRelock(String(DEFAULT_AUTO_RELOCK));
+    setFormStrict(false);
+    setFormSchedule({
+      enabled: false,
+      days: [1, 2, 3, 4, 5],
+      start: "09:00",
+      end: "17:00",
+    });
     setEditingSite(null);
   }, []);
 
@@ -320,6 +360,8 @@ export default function App() {
       challengeSettings: formChallengeSettings,
       autoRelockAfter: formAutoRelock ? parseInt(formAutoRelock) : null,
       enabled: true,
+      strict: formStrict,
+      schedule: formSchedule,
     };
 
     if (editingSite) {
@@ -344,6 +386,8 @@ export default function App() {
     formMethod,
     formChallengeSettings,
     formAutoRelock,
+    formStrict,
+    formSchedule,
     editingSite,
     resetForm,
     loadData,
@@ -360,6 +404,15 @@ export default function App() {
       site.challengeSettings ?? getDefaultChallengeSettings(site.unlockMethod)
     );
     setFormAutoRelock(site.autoRelockAfter ? String(site.autoRelockAfter) : "");
+    setFormStrict(!!site.strict);
+    setFormSchedule(
+      site.schedule || {
+        enabled: false,
+        days: [1, 2, 3, 4, 5],
+        start: "09:00",
+        end: "17:00",
+      }
+    );
     setView("edit");
   }, []);
 
@@ -373,10 +426,17 @@ export default function App() {
 
   const handleDeleteSite = useCallback(
     async (id: string) => {
-      const sites = await getBlockedSites();
-      await browser.storage.local.set({
-        ["blockedSites"]: sites.filter((s) => s.id !== id),
-      });
+      const [sites, stats] = await Promise.all([
+        getBlockedSites(),
+        getStats(),
+      ]);
+
+      await Promise.all([
+        saveBlockedSites(sites.filter((s) => s.id !== id)),
+        browser.storage.local.set({
+          [STORAGE_KEYS.STATS]: stats.filter((s) => s.siteId !== id),
+        }),
+      ]);
       loadData();
     },
     [loadData]
@@ -384,12 +444,12 @@ export default function App() {
 
   const handleToggleStats = useCallback(async () => {
     const newSettings = { ...settings, statsEnabled: !settings.statsEnabled };
-    await browser.storage.local.set({ ["settings"]: newSettings });
+    await saveSettings(newSettings);
     setSettings(newSettings);
   }, [settings]);
 
   const handleClearStats = useCallback(async () => {
-    await browser.storage.local.set({ ["stats"]: [] });
+    await browser.storage.local.set({ [STORAGE_KEYS.STATS]: [] });
     loadData();
   }, [loadData]);
 
@@ -566,18 +626,16 @@ export default function App() {
                           getDefaultChallengeSettings(method)
                         );
                       }}
-                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
-                        formMethod === method
-                          ? "bg-primary/15"
-                          : "bg-muted/30 hover:bg-muted/50"
-                      }`}
+                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${formMethod === method
+                        ? "bg-primary/15"
+                        : "bg-muted/30 hover:bg-muted/50"
+                        }`}
                     >
                       <div
-                        className={`p-2 rounded-md ${
-                          formMethod === method
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted/50 text-muted-foreground"
-                        }`}
+                        className={`p-2 rounded-md ${formMethod === method
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/50 text-muted-foreground"
+                          }`}
                       >
                         {challenge.icon}
                       </div>
@@ -618,25 +676,25 @@ export default function App() {
                           id={`option-${key}`}
                           type={
                             typeof (opt as { default: unknown }).default ===
-                            "number"
+                              "number"
                               ? "number"
                               : "text"
                           }
                           min={
                             typeof (opt as { default: unknown }).default ===
-                            "number"
+                              "number"
                               ? "1"
                               : undefined
                           }
                           value={String(
                             formChallengeSettings[
-                              key as keyof typeof formChallengeSettings
+                            key as keyof typeof formChallengeSettings
                             ] ?? (opt as { default: unknown }).default
                           )}
                           onChange={(e) => {
                             const value =
                               typeof (opt as { default: unknown }).default ===
-                              "number"
+                                "number"
                                 ? parseInt(e.target.value) || 0
                                 : e.target.value;
                             setFormChallengeSettings((prev) => ({
@@ -665,6 +723,106 @@ export default function App() {
               <p className="text-xs text-muted-foreground">
                 How long until the site is blocked again after unlocking
               </p>
+            </div>
+
+            <div className="flex items-center space-x-2 p-3 rounded-lg border border-border/50 bg-muted/20">
+              <Checkbox
+                id="strict"
+                checked={formStrict}
+                onCheckedChange={(c: boolean | "indeterminate") => setFormStrict(!!c)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="strict"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Strict Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Hide the unlock button (no way to bypass).
+                </p>
+              </div>
+            </div>
+
+
+
+            <div className="space-y-3 pt-2 border-t border-border/30">
+              <div className="flex items-center justify-between">
+                <div className="grid gap-0.5">
+                  <Label>Active Schedule</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Only block during these times
+                  </p>
+                </div>
+                <Checkbox
+                  id="schedule"
+                  checked={formSchedule.enabled}
+                  onCheckedChange={(c: boolean | "indeterminate") =>
+                    setFormSchedule({ ...formSchedule, enabled: !!c })
+                  }
+                />
+              </div>
+
+              {formSchedule.enabled && (
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+                  <div className="flex justify-between gap-1">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          const newDays = formSchedule.days.includes(i)
+                            ? formSchedule.days.filter((d) => d !== i)
+                            : [...formSchedule.days, i];
+                          setFormSchedule({ ...formSchedule, days: newDays });
+                        }}
+                        className={`size-8 rounded-full text-xs font-medium transition-all ${formSchedule.days.includes(i)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Start Time</Label>
+                      <Input
+                        type="time"
+                        value={formSchedule.start}
+                        onChange={(e) =>
+                          setFormSchedule({
+                            ...formSchedule,
+                            start: e.target.value,
+                          })
+                        }
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">End Time</Label>
+                      <Input
+                        type="time"
+                        value={formSchedule.end}
+                        onChange={(e) =>
+                          setFormSchedule({
+                            ...formSchedule,
+                            end: e.target.value,
+                          })
+                        }
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  {formSchedule.days.length === 0 && (
+                    <p className="text-xs text-destructive">
+                      Please select at least one day.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <Button
@@ -713,13 +871,17 @@ export default function App() {
                 <p className="text-xs mt-1">Visit blocked sites to see data</p>
               </div>
             ) : (
-              stats.map((stat) => (
-                <StatItem
-                  key={stat.siteId}
-                  stat={stat}
-                  site={siteMap.get(stat.siteId)}
-                />
-              ))
+              (() => {
+                const maxTime = Math.max(...stats.map((s) => s.timeSpentMs), 0);
+                return stats.map((stat) => (
+                  <StatItem
+                    key={stat.siteId}
+                    stat={stat}
+                    site={siteMap.get(stat.siteId)}
+                    maxTime={maxTime}
+                  />
+                ));
+              })()
             )}
           </div>
         )}
