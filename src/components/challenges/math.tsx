@@ -43,8 +43,9 @@ function generateMathQuestion(): MathQuestion {
 
     case "/":
       // Generate backwards to ensure whole number result
-      const divisor = randomInt(1, 50);
-      const quotient = randomInt(1, 50);
+      // Use smaller numbers (like times tables) for mental math
+      const divisor = randomInt(2, 12);
+      const quotient = randomInt(2, 12);
       num1 = divisor * quotient; // dividend
       num2 = divisor;
       answer = quotient;
