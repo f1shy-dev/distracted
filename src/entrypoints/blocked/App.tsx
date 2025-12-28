@@ -122,6 +122,14 @@ export default function BlockedPage() {
     setChallengeComplete(true);
   }, []);
 
+	useEffect(() => {window.addEventListener("keydown", handleKeypress);},[challengeComplete])
+
+	const handleKeypress = useCallback(async (e) => {
+		if ((e.code === "Space" || e.code === "Enter") && challengeComplete) {
+			handleUnlock();
+		}
+	}, [challengeComplete]);
+
   const handleUnlock = useCallback(async () => {
     if (!blockedSite || !originalUrl) return;
 
