@@ -25,3 +25,8 @@ web-ext.config.ts
 *.sln
 *.sw?
 .direnv
+
+
+.env
+.env.*
+!.env.example

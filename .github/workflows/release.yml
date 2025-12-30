@@ -14,6 +14,7 @@ on:
 jobs:
   submit:
     runs-on: ubuntu-latest
+    environment: Deploy
     permissions:
       contents: write
     
@@ -60,16 +61,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: submit to stores
+      - name: submit to chrome web store
         run: |
           bunx wxt submit \
-            --chrome-zip .output/*-chrome.zip \
-            --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+            --chrome-zip .output/*-chrome.zip --chrome-publish-target default --chrome-skip-submit-review
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+      - name: submit to firefox addons
+        run: |
+          bunx wxt submit \
+            --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+        env:
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
