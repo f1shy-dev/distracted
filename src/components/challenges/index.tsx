@@ -1,7 +1,13 @@
-import { IconClock, IconHandStop, IconKeyboard } from "@tabler/icons-react";
+import {
+  IconClock,
+  IconHandStop,
+  IconKeyboard,
+  IconMath,
+} from "@tabler/icons-react";
 import { TimerChallenge } from "./timer";
 import { HoldChallenge } from "./hold";
 import { TypeChallenge } from "./type";
+import { MathChallenge } from "./math";
 
 type ChallengeOptionValue = number | string | boolean;
 type ChallengeOptions = Record<string, ChallengeOptionValue>;
@@ -68,6 +74,20 @@ export const CHALLENGES = {
     title: "Type to Access",
     options: {},
     render: (props) => <TypeChallenge {...props} />,
+  }),
+  math: define({
+    label: "Math Challenge",
+    icon: <IconMath className="size-5" />,
+    description: "Solve math problems to unlock",
+    title: "Solve to Access",
+    options: {
+      questionCount: {
+        label: "Number of Questions",
+        default: 3,
+        description: "How many math problems to solve (1-10)",
+      },
+    },
+    render: (props) => <MathChallenge {...props} />,
   }),
 } as const;
 
