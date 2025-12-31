@@ -40,4 +40,5 @@ export interface SiteStats {
 
 export interface Settings {
   statsEnabled: boolean;
+  requireChallengeForChanges: boolean;
 }
