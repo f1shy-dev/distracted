@@ -16,6 +16,7 @@ export { normalizeStats } from "./storage/migrations";
 
 export const defaultSettings: Settings = {
   statsEnabled: true,
+  requireChallengeForChanges: true,
 };
 
 let syncBlockedForSession = false;

@@ -41,6 +41,7 @@ import {
   IconWorld,
   IconClockHour5Filled,
 } from "@tabler/icons-react";
+import { ChallengeDialog } from "@/components/ChallengeDialog";
 
 type View = "main" | "add" | "edit" | "stats" | "settings";
 const DEFAULT_UNLOCK_METHOD: UnlockMethod = "timer";
@@ -99,11 +100,13 @@ const SiteItem = memo(function SiteItem({
   onToggle,
   onEdit,
   onDelete,
+  requireChallenge,
 }: {
   site: BlockedSite;
   onToggle: (id: string, enabled: boolean) => void;
   onEdit: (site: BlockedSite) => void;
   onDelete: (id: string) => void;
+  requireChallenge: (title: string, description: string, action: () => void | Promise<void>) => void;
 }) {
   const resolvedMethod = isUnlockMethod(site.unlockMethod)
     ? site.unlockMethod
@@ -144,7 +147,17 @@ const SiteItem = memo(function SiteItem({
           </Badge>
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(site)}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() =>
+              requireChallenge(
+                "Edit Site Block",
+                "Complete this challenge to edit this site block",
+                () => onEdit(site),
+              )
+            }
+          >
             <IconEdit className="size-4" />
           </Button>
           <Button variant="ghost" size="icon-sm" onClick={() => onToggle(site.id, !site.enabled)}>
@@ -238,11 +251,20 @@ export default function App() {
   const [view, setView] = useState<View>("main");
   const [sites, setSites] = useState<BlockedSite[]>([]);
   const [stats, setStats] = useState<SiteStats[]>([]);
-  const [settings, setSettings] = useState<Settings>({ statsEnabled: true });
+  const [settings, setSettings] = useState<Settings>({
+    statsEnabled: true,
+    requireChallengeForChanges: true,
+  });
   const [loading, setLoading] = useState(true);
   const [editingSite, setEditingSite] = useState<BlockedSite | null>(null);
   const [statsView, setStatsView] = useState<"filter" | "website">("filter");
   const syncAvailable = isSyncAvailable();
+  const [challengeDialog, setChallengeDialog] = useState<{
+    open: boolean;
+    title: string;
+    description?: string;
+    onComplete: () => void;
+  } | null>(null);
 
   const [formName, setFormName] = useState("");
   const [formRules, setFormRules] = useState<PatternRule[]>([{ pattern: "", allow: false }]);
@@ -257,6 +279,25 @@ export default function App() {
     start: "09:00",
     end: "17:00",
   });
+
+  const requireChallenge = useCallback(
+    (title: string, description: string, action: () => void | Promise<void>) => {
+      if (!settings.requireChallengeForChanges) {
+        void action();
+        return;
+      }
+      setChallengeDialog({
+        open: true,
+        title,
+        description,
+        onComplete: () => {
+          void action();
+          setChallengeDialog(null);
+        },
+      });
+    },
+    [settings.requireChallengeForChanges],
+  );
 
   const loadData = useCallback(async () => {
     const [loadedSites, loadedStats, loadedSettings] = await Promise.all([
@@ -379,27 +420,44 @@ export default function App() {
 
   const handleToggleSite = useCallback(
     async (id: string, enabled: boolean) => {
-      await updateBlockedSite(id, { enabled });
-      void loadData();
+      if (!enabled) {
+        requireChallenge(
+          "Disable Site Block",
+          "Complete this challenge to disable blocking for this site",
+          async () => {
+            await updateBlockedSite(id, { enabled });
+            void loadData();
+          },
+        );
+      } else {
+        await updateBlockedSite(id, { enabled });
+        void loadData();
+      }
     },
-    [loadData],
+    [loadData, requireChallenge],
   );
 
   const handleDeleteSite = useCallback(
     async (id: string) => {
-      const [sites, stats] = await Promise.all([getBlockedSites(), getStats()]);
+      requireChallenge(
+        "Delete Site Block",
+        "Complete this challenge to permanently delete this site block",
+        async () => {
+          const [sites, stats] = await Promise.all([getBlockedSites(), getStats()]);
 
-      await Promise.all([
-        saveBlockedSites(sites.filter((s) => s.id !== id)),
-        browser.storage.local.set({
-          [STORAGE_KEYS.STATS]: stats.filter(
-            (stat) => stat.scope !== "site" || (stat.siteId ?? stat.key) !== id,
-          ),
-        }),
-      ]);
-      void loadData();
+          await Promise.all([
+            saveBlockedSites(sites.filter((s) => s.id !== id)),
+            browser.storage.local.set({
+              [STORAGE_KEYS.STATS]: stats.filter(
+                (stat) => stat.scope !== "site" || (stat.siteId ?? stat.key) !== id,
+              ),
+            }),
+          ]);
+          void loadData();
+        },
+      );
     },
-    [loadData],
+    [loadData, requireChallenge],
   );
 
   const handleToggleStats = useCallback(async () => {
@@ -512,6 +570,7 @@ export default function App() {
                   onToggle={handleToggleSite}
                   onEdit={handleEditSite}
                   onDelete={handleDeleteSite}
+                  requireChallenge={requireChallenge}
                 />
               ))
             )}
@@ -833,6 +892,48 @@ export default function App() {
           <div className="space-y-4">
             <Card className="bg-muted/30">
               <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Security</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-sm">Require Challenge for Changes</div>
+                    <div className="text-xs text-muted-foreground">
+                      Complete a challenge before disabling, editing, or deleting sites
+                    </div>
+                  </div>
+                  <Button
+                    variant={settings.requireChallengeForChanges ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      if (settings.requireChallengeForChanges) {
+                        requireChallenge(
+                          "Disable Protection",
+                          "Complete this challenge to disable challenge requirements for changes",
+                          async () => {
+                            const newSettings = {
+                              ...settings,
+                              requireChallengeForChanges: false,
+                            };
+                            await saveSettings(newSettings);
+                            setSettings(newSettings);
+                          },
+                        );
+                      } else {
+                        const newSettings = { ...settings, requireChallengeForChanges: true };
+                        void saveSettings(newSettings);
+                        setSettings(newSettings);
+                      }
+                    }}
+                  >
+                    {settings.requireChallengeForChanges ? "Enabled" : "Disabled"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/30">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm">Privacy</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -887,6 +988,16 @@ export default function App() {
             Block a Website
           </Button>
         </div>
+      )}
+
+      {challengeDialog && (
+        <ChallengeDialog
+          open={challengeDialog.open}
+          onOpenChange={(open) => !open && setChallengeDialog(null)}
+          onComplete={challengeDialog.onComplete}
+          title={challengeDialog.title}
+          description={challengeDialog.description}
+        />
       )}
     </div>
   );
