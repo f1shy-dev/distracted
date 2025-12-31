@@ -1,8 +1,4 @@
-import {
-  getBlockedSites,
-  urlMatchesSiteRules,
-  type BlockedSite,
-} from "@/lib/storage";
+import { getBlockedSites, urlMatchesSiteRules, type BlockedSite } from "@/lib/storage";
 import { ALARM_PREFIX } from "@/lib/consts";
 import { isInternalUrl } from "../utils";
 
@@ -52,15 +48,12 @@ export async function initializeWebRequest(): Promise<void> {
 
         if (matches) {
           const blockedPageUrl = browser.runtime.getURL(
-            `/blocked.html?url=${encodeURIComponent(url)}&siteId=${encodeURIComponent(site.id)}`
+            `/blocked.html?url=${encodeURIComponent(url)}&siteId=${encodeURIComponent(site.id)}`,
           );
 
           if (tabId && tabId !== -1) {
             browser.tabs.update(tabId, { url: blockedPageUrl }).catch((err) => {
-              console.error(
-                `[distracted] Failed to redirect tab ${tabId}:`,
-                err
-              );
+              console.error(`[distracted] Failed to redirect tab ${tabId}:`, err);
             });
           }
 
@@ -71,13 +64,13 @@ export async function initializeWebRequest(): Promise<void> {
       return undefined;
     },
     { urls: ["<all_urls>"], types: ["main_frame"] },
-    ["blocking"]
+    ["blocking"],
   );
 }
 
 export async function grantAccess(
   siteId: string,
-  durationMinutes: number | null
+  durationMinutes: number | null,
 ): Promise<{ expiresAt: number }> {
   const durationMs = (durationMinutes ?? 60) * 60 * 1000;
   const expiresAt = Date.now() + durationMs;
@@ -131,9 +124,7 @@ export async function isSiteUnlocked(siteId: string): Promise<boolean> {
   return true;
 }
 
-export async function getUnlockState(
-  siteId: string
-): Promise<UnlockState | null> {
+export async function getUnlockState(siteId: string): Promise<UnlockState | null> {
   const state = unlockedSites.get(siteId);
   if (!state) return null;
 

@@ -76,7 +76,7 @@ export const TimerChallenge = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 TimerChallenge.displayName = "TimerChallenge";

@@ -3,11 +3,11 @@ name: release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to build and attach to release (e.g., v0.0.0-beta.1)'
+        description: "Tag to build and attach to release (e.g., v0.0.0-beta.1)"
         required: true
         type: string
 
@@ -17,7 +17,7 @@ jobs:
     environment: Deploy
     permissions:
       contents: write
-    
+
     steps:
       - name: checkout
         uses: actions/checkout@v5

@@ -1,12 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { type BlockedSite } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   IconClockHour5Filled,
   IconX,
@@ -74,11 +69,7 @@ export default function BlockedPage() {
             setChallengeComplete(true);
           }
 
-          if (
-            result.statsEnabled &&
-            !visitTracked.current &&
-            !result.alreadyUnlocked
-          ) {
+          if (result.statsEnabled && !visitTracked.current && !result.alreadyUnlocked) {
             visitTracked.current = true;
             await browser.runtime.sendMessage({
               type: "UPDATE_STATS",
@@ -100,25 +91,15 @@ export default function BlockedPage() {
   }, []);
 
   useEffect(() => {
-    const handleMessage = (message: {
-      type: string;
-      siteId?: string;
-      expiresAt?: number;
-    }) => {
+    const handleMessage = (message: { type: string; siteId?: string; expiresAt?: number }) => {
       if (!siteIdRef.current) return;
 
-      if (
-        message.type === "SITE_UNLOCKED" &&
-        message.siteId === siteIdRef.current
-      ) {
+      if (message.type === "SITE_UNLOCKED" && message.siteId === siteIdRef.current) {
         setAlreadyUnlocked(true);
         setChallengeComplete(true);
       }
 
-      if (
-        message.type === "SITE_RELOCKED" &&
-        message.siteId === siteIdRef.current
-      ) {
+      if (message.type === "SITE_RELOCKED" && message.siteId === siteIdRef.current) {
         window.location.reload();
       }
     };
@@ -211,21 +192,16 @@ export default function BlockedPage() {
   }
 
   const resolvedMethod: UnlockMethod =
-    blockedSite.unlockMethod in CHALLENGES
-      ? blockedSite.unlockMethod
-      : "timer";
+    blockedSite.unlockMethod in CHALLENGES ? blockedSite.unlockMethod : "timer";
   const challenge = CHALLENGES[resolvedMethod];
-  const challengeSettings =
-    ({
-      ...getDefaultChallengeSettings(resolvedMethod),
-      ...(blockedSite.unlockMethod in CHALLENGES
-        ? blockedSite.challengeSettings
-        : {}),
-    } as typeof challenge extends {
-      render: (props: infer P extends { settings: any }) => any;
-    }
-      ? P["settings"]
-      : never);
+  const challengeSettings = {
+    ...getDefaultChallengeSettings(resolvedMethod),
+    ...(blockedSite.unlockMethod in CHALLENGES ? blockedSite.challengeSettings : {}),
+  } as typeof challenge extends {
+    render: (props: infer P extends { settings: any }) => any;
+  }
+    ? P["settings"]
+    : never;
 
   return (
     <div
@@ -249,9 +225,7 @@ export default function BlockedPage() {
             <CardTitle className="text-xl">Site Blocked</CardTitle>
           </div>
           <div className="flex gap-2 text-xs items-center max-w-full">
-            <span className="bg-muted/50 px-2 py-0.5 rounded font-medium">
-              {blockedSite.name}
-            </span>
+            <span className="bg-muted/50 px-2 py-0.5 rounded font-medium">{blockedSite.name}</span>
             {originalUrl && (
               <div className="text-muted-foreground font-mono truncate bg-muted/50 px-2 py-0.5 rounded">
                 {originalUrl
@@ -271,9 +245,7 @@ export default function BlockedPage() {
                 <IconLockOpen className="size-6" />
                 <div>
                   <p className="font-medium">Already Unlocked</p>
-                  <p className="text-sm text-green-500/80">
-                    Challenge completed in another tab
-                  </p>
+                  <p className="text-sm text-green-500/80">Challenge completed in another tab</p>
                 </div>
               </div>
             </div>
@@ -292,12 +264,7 @@ export default function BlockedPage() {
           )}
 
           {challengeComplete && (
-            <Button
-              onClick={handleUnlock}
-              className="w-full"
-              size="lg"
-              disabled={unlocking}
-            >
+            <Button onClick={handleUnlock} className="w-full" size="lg" disabled={unlocking}>
               {unlocking ? (
                 "Unlocking..."
               ) : (

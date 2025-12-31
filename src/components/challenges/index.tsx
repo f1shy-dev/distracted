@@ -29,9 +29,7 @@ type Challenge<Options extends ChallengeOptions = ChallengeOptions> = {
   render: (props: ChallengeComponentProps<Options>) => React.ReactNode;
 };
 
-const define = <Options extends ChallengeOptions>(
-  challenge: Challenge<Options>
-) => challenge;
+const define = <Options extends ChallengeOptions>(challenge: Challenge<Options>) => challenge;
 
 export const CHALLENGES = {
   timer: define({
@@ -93,7 +91,7 @@ export type ChallengeSettingsMap = {
 };
 
 export function getDefaultChallengeSettings<M extends UnlockMethod>(
-  method: M
+  method: M,
 ): ChallengeSettingsMap[M] {
   const challenge = CHALLENGES[method];
   const settings: Record<string, ChallengeOptionValue> = {};

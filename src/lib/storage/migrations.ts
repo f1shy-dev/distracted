@@ -60,9 +60,10 @@ function normalizeBlockedSite(site: BlockedSite): {
   return { site: normalized, changed };
 }
 
-export function normalizeBlockedSites(
-  sites: BlockedSite[] | undefined
-): { sites: BlockedSite[]; changed: boolean } {
+export function normalizeBlockedSites(sites: BlockedSite[] | undefined): {
+  sites: BlockedSite[];
+  changed: boolean;
+} {
   if (!sites) return { sites: [], changed: false };
   if (!Array.isArray(sites)) return { sites: [], changed: true };
   let changed = false;
@@ -87,9 +88,10 @@ function normalizeNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-export function normalizeStats(
-  stats: SiteStats[] | undefined
-): { stats: SiteStats[]; changed: boolean } {
+export function normalizeStats(stats: SiteStats[] | undefined): {
+  stats: SiteStats[];
+  changed: boolean;
+} {
   if (!stats) return { stats: [], changed: false };
   if (!Array.isArray(stats)) return { stats: [], changed: true };
 
@@ -114,8 +116,8 @@ export function normalizeStats(
     const next: SiteStats = {
       scope,
       key,
-      siteId: scope === "site" ? (entry as SiteStats).siteId ?? key : undefined,
-      domain: scope === "domain" ? (entry as SiteStats).domain ?? key : undefined,
+      siteId: scope === "site" ? ((entry as SiteStats).siteId ?? key) : undefined,
+      domain: scope === "domain" ? ((entry as SiteStats).domain ?? key) : undefined,
       visitCount: normalizeNumber((entry as SiteStats).visitCount),
       passedCount: normalizeNumber((entry as SiteStats).passedCount),
       timeSpentMs: normalizeNumber((entry as SiteStats).timeSpentMs),
@@ -142,16 +144,14 @@ export type MigrationHelpers = {
   setToArea: <K extends StorageKey>(
     area: StorageArea,
     key: K,
-    value: StorageShape[K]
+    value: StorageShape[K],
   ) => Promise<void>;
   shouldUseSync: () => boolean;
 };
 
 let migrationPromise: Promise<void> | null = null;
 
-export async function ensureStorageUpgraded(
-  helpers: MigrationHelpers
-): Promise<void> {
+export async function ensureStorageUpgraded(helpers: MigrationHelpers): Promise<void> {
   if (migrationPromise) return migrationPromise;
 
   migrationPromise = (async () => {
@@ -159,43 +159,24 @@ export async function ensureStorageUpgraded(
     if (helpers.shouldUseSync()) areas.push("sync");
 
     for (const area of areas) {
-      const versionResult = await helpers.getFromArea(
-        area,
-        STORAGE_KEYS.SCHEMA_VERSION
-      );
-      const version =
-        typeof versionResult.value === "number" ? versionResult.value : 1;
+      const versionResult = await helpers.getFromArea(area, STORAGE_KEYS.SCHEMA_VERSION);
+      const version = typeof versionResult.value === "number" ? versionResult.value : 1;
 
       if (version >= STORAGE_SCHEMA_VERSION) continue;
 
-      const sitesResult = await helpers.getFromArea(
-        area,
-        STORAGE_KEYS.BLOCKED_SITES
-      );
+      const sitesResult = await helpers.getFromArea(area, STORAGE_KEYS.BLOCKED_SITES);
       const normalizedSites = normalizeBlockedSites(sitesResult.value);
       if (normalizedSites.changed) {
-        await helpers.setToArea(
-          area,
-          STORAGE_KEYS.BLOCKED_SITES,
-          normalizedSites.sites
-        );
+        await helpers.setToArea(area, STORAGE_KEYS.BLOCKED_SITES, normalizedSites.sites);
       }
 
       const statsResult = await helpers.getFromArea(area, STORAGE_KEYS.STATS);
       const normalizedStats = normalizeStats(statsResult.value);
       if (normalizedStats.changed) {
-        await helpers.setToArea(
-          area,
-          STORAGE_KEYS.STATS,
-          normalizedStats.stats
-        );
+        await helpers.setToArea(area, STORAGE_KEYS.STATS, normalizedStats.stats);
       }
 
-      await helpers.setToArea(
-        area,
-        STORAGE_KEYS.SCHEMA_VERSION,
-        STORAGE_SCHEMA_VERSION
-      );
+      await helpers.setToArea(area, STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
     }
   })().catch((error) => {
     console.error("Storage migration failed:", error);

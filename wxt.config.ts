@@ -10,13 +10,7 @@ export default defineConfig({
     const isFirefox = browser === "firefox";
 
     // Base permissions shared between browsers
-    const basePermissions = [
-      "storage",
-      "tabs",
-      "activeTab",
-      "webNavigation",
-      "alarms",
-    ];
+    const basePermissions = ["storage", "tabs", "activeTab", "webNavigation", "alarms"];
 
     // MV3 Chrome uses declarativeNetRequest + webNavigation for redirect
     // MV2 Firefox uses webRequest blocking (needs host permissions)
@@ -29,8 +23,7 @@ export default defineConfig({
 
     return {
       name: "distracted",
-      description:
-        "blocks distracting websites! do mini tasks to get back on them...",
+      description: "blocks distracting websites! do mini tasks to get back on them...",
       permissions,
       host_permissions: hostPermissions,
       ...(isFirefox

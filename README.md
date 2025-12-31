@@ -5,6 +5,7 @@ blocks distracting websites! do mini tasks to get back on them...
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ggimjhcfchbfdhpehdekdiblbfmijngf?label=chrome%20web%20store&style=for-the-badge)](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
 
 ## what?
+
 - blocks websites that distract you
 - multiple unlock challenges (more soon):
   - timer
@@ -18,6 +19,7 @@ blocks distracting websites! do mini tasks to get back on them...
 **chrome/chromium (recommended):** install from the [chrome web store](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
 
 **manual install (all browsers/dev builds):**
+
 1. download the latest release from [releases](https://github.com/f1shy-dev/distracted/releases)
 2. unzip the file
 3. load it in your browser:
@@ -26,6 +28,7 @@ blocks distracting websites! do mini tasks to get back on them...
 4. done! configure which sites to block in the extension popup
 
 ## why?
+
 mindless visiting is more and more common. you end up idling, and then end up on a site you didn't want to be on in the first place.
 
 the idea of this extension is to give you a boring, non-stimulating task. having to wait, hold the button or so on is like giving your mind time to think about what you're doing consciously, or making it annoying enough that you don't want to do it.
@@ -33,6 +36,7 @@ the idea of this extension is to give you a boring, non-stimulating task. having
 it's similar to not remembering/saving your payment details, so you have to find your physical card/wallet when doing online purchases; giving a second chance to rethink your purchase
 
 ### but... can't i just delete the extension?
+
 yes! you could also just not install it! there is only so many layers of annoyance you can add<sup>[1]</sup>, after which it becomes more about your own self-control than what the technology can do for you.
 
 ...but if you do have an idea for how it could be more useful for you, [open an issue](https://github.com/f1shy-dev/distracted/issues) and let me know!
@@ -46,25 +50,30 @@ yes! you could also just not install it! there is only so many layers of annoyan
 ## how to build
 
 ### environment
-* **operating system:** Ubuntu 24.04 LTS (or compatible Linux distribution)  
-* **package manager:** Bun 1.3.6 or later
-* **node.js:** v25.2.1 or later (required by Bun)
+
+- **operating system:** Ubuntu 24.04 LTS (or compatible Linux distribution)
+- **package manager:** Bun 1.3.6 or later
+- **node.js:** v25.2.1 or later (required by Bun)
 
 ### instructions
 
 1. install bun (if not already installed):
+
    ```bash
    curl -fsSL https://bun.sh/install | bash
    ```
+
    or follow the official installation guide: https://bun.sh/docs/installation
 
 2. verify bun installation:
+
    ```bash
    bun --version
    # should output: 1.3.6 or later
    ```
 
 3. install project dependencies, and build the extension:
+
    ```bash
    bun install --frozen-lockfile
    bun run zip # for chrome

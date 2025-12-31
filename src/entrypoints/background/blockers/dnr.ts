@@ -50,14 +50,10 @@ export async function syncDnrRules(): Promise<void> {
     let hostRegex: string;
     if (hostPattern.startsWith("*.")) {
       const domain = hostPattern.slice(2);
-      const escapedDomain = domain
-        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*/g, ".*");
+      const escapedDomain = domain.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
       hostRegex = `([a-z0-9-]+\\.)*${escapedDomain}`;
     } else if (hostPattern.includes("*")) {
-      const escapedHost = hostPattern
-        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*/g, ".*");
+      const escapedHost = hostPattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
       hostRegex = `(www\\.)?${escapedHost}`;
     } else {
       const escapedHost = hostPattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
@@ -66,9 +62,7 @@ export async function syncDnrRules(): Promise<void> {
 
     let pathRegex: string;
     if (pathPattern) {
-      const escapedPath = pathPattern
-        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*/g, ".*");
+      const escapedPath = pathPattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
       if (pathPattern.endsWith("*")) {
         pathRegex = escapedPath;
       } else {
@@ -122,13 +116,13 @@ export async function syncDnrRules(): Promise<void> {
   });
 
   console.log(
-    `[distracted] DNR rules synced: ${newRules.length} rules for ${sites.filter((s) => s.enabled).length} sites`
+    `[distracted] DNR rules synced: ${newRules.length} rules for ${sites.filter((s) => s.enabled).length} sites`,
   );
 }
 
 export async function grantAccess(
   siteId: string,
-  durationMinutes: number | null
+  durationMinutes: number | null,
 ): Promise<{ expiresAt: number }> {
   const durationMs = (durationMinutes ?? 60) * 60 * 1000;
   const expiresAt = Date.now() + durationMs;
@@ -145,9 +139,7 @@ export async function grantAccess(
     when: expiresAt,
   });
 
-  console.log(
-    `[distracted] Granted access to site ${siteId} for ${durationMinutes ?? 60} minutes`
-  );
+  console.log(`[distracted] Granted access to site ${siteId} for ${durationMinutes ?? 60} minutes`);
 
   return { expiresAt };
 }
@@ -159,7 +151,7 @@ export async function revokeAccess(siteId: string): Promise<number[]> {
   const tabsToRedirect = await findTabsOnBlockedSite(siteId);
 
   console.log(
-    `[distracted] Revoked access to site ${siteId}, ${tabsToRedirect.length} tabs to redirect`
+    `[distracted] Revoked access to site ${siteId}, ${tabsToRedirect.length} tabs to redirect`,
   );
 
   return tabsToRedirect;
@@ -205,9 +197,7 @@ export async function isSiteUnlocked(siteId: string): Promise<boolean> {
   return true;
 }
 
-export async function getUnlockState(
-  siteId: string
-): Promise<UnlockState | null> {
+export async function getUnlockState(siteId: string): Promise<UnlockState | null> {
   const result = await browser.storage.session.get(`${UNLOCK_PREFIX}${siteId}`);
   const state = result[`${UNLOCK_PREFIX}${siteId}`] as UnlockState | undefined;
 

@@ -26,7 +26,7 @@ function hasOwnKey(obj: object, key: string): boolean {
 
 async function getFromArea<K extends StorageKey>(
   area: StorageArea,
-  key: K
+  key: K,
 ): Promise<StoredValue<K>> {
   const result = await browser.storage[area].get(key);
   return {
@@ -39,9 +39,7 @@ function shouldUseSync(): boolean {
   return isSyncAvailable() && !syncBlockedForSession;
 }
 
-async function getFromSync<K extends StorageKey>(
-  key: K
-): Promise<StoredValue<K>> {
+async function getFromSync<K extends StorageKey>(key: K): Promise<StoredValue<K>> {
   if (!shouldUseSync()) return { found: false };
   try {
     return await getFromArea("sync", key);
@@ -55,7 +53,7 @@ async function getFromSync<K extends StorageKey>(
 async function setToArea<K extends StorageKey>(
   area: StorageArea,
   key: K,
-  value: StorageShape[K]
+  value: StorageShape[K],
 ): Promise<void> {
   const payload = { [key]: value } as Record<K, StorageShape[K]>;
   await browser.storage[area].set(payload);
@@ -63,7 +61,7 @@ async function setToArea<K extends StorageKey>(
 
 async function setWithFallback<K extends StorageKey>(
   key: K,
-  value: StorageShape[K]
+  value: StorageShape[K],
 ): Promise<void> {
   try {
     if (!shouldUseSync()) {
@@ -92,9 +90,7 @@ const migrationHelpers = {
   shouldUseSync,
 };
 
-async function getWithFallback<K extends StorageKey>(
-  key: K
-): Promise<StorageShape[K] | undefined> {
+async function getWithFallback<K extends StorageKey>(key: K): Promise<StorageShape[K] | undefined> {
   const syncResult = await getFromSync(key);
   if (syncResult.found) return syncResult.value;
 
@@ -123,7 +119,7 @@ export async function saveBlockedSites(sites: BlockedSite[]): Promise<void> {
 }
 
 export async function addBlockedSite(
-  site: Omit<BlockedSite, "id" | "createdAt">
+  site: Omit<BlockedSite, "id" | "createdAt">,
 ): Promise<BlockedSite> {
   const sites = await getBlockedSites();
   const newSite: BlockedSite = {
@@ -136,10 +132,7 @@ export async function addBlockedSite(
   return newSite;
 }
 
-export async function updateBlockedSite(
-  id: string,
-  updates: Partial<BlockedSite>
-): Promise<void> {
+export async function updateBlockedSite(id: string, updates: Partial<BlockedSite>): Promise<void> {
   const sites = await getBlockedSites();
   const index = sites.findIndex((s) => s.id === id);
   if (index !== -1) {
@@ -192,15 +185,11 @@ export function urlMatchesPattern(url: string, pattern: string): boolean {
 
       if (hostPattern.startsWith("*.")) {
         const domain = hostPattern.slice(2);
-        hostMatches =
-          normalizedHost === domain || normalizedHost.endsWith("." + domain);
+        hostMatches = normalizedHost === domain || normalizedHost.endsWith("." + domain);
       } else if (hostPattern.includes("*")) {
-        const regexPattern = hostPattern
-          .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-          .replace(/\*/g, ".*");
+        const regexPattern = hostPattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
         const regex = new RegExp(`^${regexPattern}$`, "i");
-        hostMatches =
-          regex.test(normalizedHost) || regex.test(hostname.toLowerCase());
+        hostMatches = regex.test(normalizedHost) || regex.test(hostname.toLowerCase());
       } else {
         hostMatches =
           normalizedHost === hostPattern ||
@@ -220,9 +209,7 @@ export function urlMatchesPattern(url: string, pattern: string): boolean {
 
       const cleanPattern = normalizedPathPattern.replace(/\/$/, "");
       const cleanPath = normalizedPath.replace(/\/$/, "");
-      return (
-        cleanPath === cleanPattern || cleanPath.startsWith(cleanPattern + "/")
-      );
+      return cleanPath === cleanPattern || cleanPath.startsWith(cleanPattern + "/");
     }
 
     const normalizedHost = hostname.toLowerCase().replace(/^www\./, "");
@@ -273,10 +260,8 @@ export function isInSchedule(schedule: Schedule): boolean {
   }
 
   const prevDay = (day + 6) % 7;
-  const inCurrentDayWindow =
-    schedule.days.includes(day) && currentMinutes >= startMinutes;
-  const inPrevDayWindow =
-    schedule.days.includes(prevDay) && currentMinutes <= endMinutes;
+  const inCurrentDayWindow = schedule.days.includes(day) && currentMinutes >= startMinutes;
+  const inPrevDayWindow = schedule.days.includes(prevDay) && currentMinutes <= endMinutes;
 
   return inCurrentDayWindow || inPrevDayWindow;
 }
@@ -307,9 +292,7 @@ export function urlMatchesSiteRules(url: string, site: BlockedSite): boolean {
   return isBlocked;
 }
 
-export async function findMatchingBlockedSite(
-  url: string
-): Promise<BlockedSite | null> {
+export async function findMatchingBlockedSite(url: string): Promise<BlockedSite | null> {
   const sites = await getBlockedSites();
   return sites.find((site) => urlMatchesSiteRules(url, site)) || null;
 }

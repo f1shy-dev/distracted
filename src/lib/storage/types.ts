@@ -1,7 +1,4 @@
-import type {
-  UnlockMethod,
-  ChallengeSettingsMap,
-} from "@/components/challenges";
+import type { UnlockMethod, ChallengeSettingsMap } from "@/components/challenges";
 
 export interface PatternRule {
   pattern: string; // URL pattern (e.g., "twitter.com", "*.reddit.com", "x.com/messages")

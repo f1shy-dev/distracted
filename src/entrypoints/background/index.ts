@@ -29,7 +29,7 @@ async function isSiteUnlocked(siteId: string): Promise<boolean> {
 }
 
 async function getUnlockState(
-  siteId: string
+  siteId: string,
 ): Promise<{ siteId: string; expiresAt: number } | null> {
   if (isMV3) return dnr.getUnlockState(siteId);
   else return webRequest.getUnlockState(siteId);
@@ -52,7 +52,7 @@ function getOrCreateStat(
   stats: SiteStats[],
   scope: StatsScope,
   key: string,
-  meta: { siteId?: string; domain?: string }
+  meta: { siteId?: string; domain?: string },
 ): SiteStats {
   let entry = stats.find((stat) => stat.scope === scope && stat.key === key);
   if (!entry) {
@@ -111,7 +111,7 @@ async function applyStatsUpdate({
     entries.push(
       getOrCreateStat(stats, "domain", normalizedDomain, {
         domain: normalizedDomain,
-      })
+      }),
     );
   }
 
@@ -159,10 +159,7 @@ function createMV3TimeTracker() {
     return pending;
   };
 
-  const resolveTabUrl = async (
-    tabId: number,
-    url?: string | null
-  ): Promise<string | null> => {
+  const resolveTabUrl = async (tabId: number, url?: string | null): Promise<string | null> => {
     if (url !== undefined) return url;
     try {
       const tab = await browser.tabs.get(tabId);
@@ -172,8 +169,7 @@ function createMV3TimeTracker() {
     }
   };
 
-  const isTrackableUrl = (url: string | null): url is string =>
-    !!url && !isInternalUrl(url);
+  const isTrackableUrl = (url: string | null): url is string => !!url && !isInternalUrl(url);
 
   const finalizeActive = async (now: number) => {
     if (!active.lastActiveAt || !active.siteId || !focused || !statsEnabled) {
@@ -203,8 +199,7 @@ function createMV3TimeTracker() {
 
     const match = await findMatchingBlockedSite(resolvedUrl);
     active.siteId = match?.id ?? null;
-    active.lastActiveAt =
-      active.siteId && focused && statsEnabled ? Date.now() : null;
+    active.lastActiveAt = active.siteId && focused && statsEnabled ? Date.now() : null;
   };
 
   const switchToTab = async (tabId: number, url?: string | null) => {
@@ -258,11 +253,7 @@ function createMV3TimeTracker() {
       await switchToTab(info.tabId);
     });
 
-  const onTabUpdated = (
-    tabId: number,
-    changeInfo: { url?: string },
-    _tab: { url?: string }
-  ) =>
+  const onTabUpdated = (tabId: number, changeInfo: { url?: string }, _tab: { url?: string }) =>
     queue(async () => {
       if (!active.tabId || tabId !== active.tabId) return;
       if (!changeInfo.url) return;
@@ -390,9 +381,7 @@ export default defineBackground(() => {
     browser.tabs.onUpdated.addListener(mv3Tracker.onTabUpdated);
     browser.tabs.onRemoved.addListener(mv3Tracker.onTabRemoved);
     browser.windows.onFocusChanged.addListener(mv3Tracker.onFocusChanged);
-    browser.webNavigation.onHistoryStateUpdated.addListener(
-      mv3Tracker.onHistoryStateUpdated
-    );
+    browser.webNavigation.onHistoryStateUpdated.addListener(mv3Tracker.onHistoryStateUpdated);
     browser.alarms.onAlarm.addListener(mv3Tracker.onAlarm);
   }
 
@@ -410,7 +399,7 @@ export default defineBackground(() => {
         if (!tab.url) continue;
 
         const blockedPageUrl = browser.runtime.getURL(
-          `/blocked.html?url=${encodeURIComponent(tab.url)}&siteId=${encodeURIComponent(siteId)}`
+          `/blocked.html?url=${encodeURIComponent(tab.url)}&siteId=${encodeURIComponent(siteId)}`,
         );
         await browser.tabs.update(tabId, { url: blockedPageUrl });
         console.log(`[distracted] Redirected tab ${tabId} after relock`);
@@ -432,7 +421,7 @@ export default defineBackground(() => {
     console.log(`[distracted] Blocking (${source}): ${url}`);
 
     const blockedPageUrl = browser.runtime.getURL(
-      `/blocked.html?url=${encodeURIComponent(url)}&siteId=${encodeURIComponent(site.id)}`
+      `/blocked.html?url=${encodeURIComponent(url)}&siteId=${encodeURIComponent(site.id)}`,
     );
 
     try {
