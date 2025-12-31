@@ -2,10 +2,8 @@ import { memo } from "react";
 import { IconLock } from "@tabler/icons-react";
 import type { ChallengeComponentProps } from "./index";
 
-type EmptySettings = Record<string, never>;
-
 export const StrictChallenge = memo(
-  (_props: ChallengeComponentProps<EmptySettings>) => {
+  (_props: ChallengeComponentProps<{}>) => {
     return (
       <div className="space-y-3 text-center">
         <div className="flex items-center justify-center text-destructive">
