@@ -1,4 +1,4 @@
-![distracted\! - "block distracting websites! do mini tasks to get back on them..."](public/readme-banner.png)
+![distracted! - "block distracting websites! do mini tasks to get back on them..."](public/readme-banner.png)
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ggimjhcfchbfdhpehdekdiblbfmijngf?label=chrome%20web%20store&style=for-the-badge)](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
 [![Firefox Add-ons](https://img.shields.io/amo/v/distracted?label=firefox%20add-ons&style=for-the-badge)](https://addons.mozilla.org/en-GB/firefox/addon/distracted/)
