@@ -1,7 +1,8 @@
-import { IconClock, IconHandStop, IconKeyboard } from "@tabler/icons-react";
+import { IconClock, IconHandStop, IconKeyboard, IconLock } from "@tabler/icons-react";
 import { TimerChallenge } from "./timer";
 import { HoldChallenge } from "./hold";
 import { TypeChallenge } from "./type";
+import { StrictChallenge } from "./strict";
 
 type ChallengeOptionValue = number | string | boolean;
 type ChallengeOptions = Record<string, ChallengeOptionValue>;
@@ -68,6 +69,14 @@ export const CHALLENGES = {
     title: "Type to Access",
     options: {},
     render: (props) => <TypeChallenge {...props} />,
+  }),
+  strict: define({
+    label: "Strict Mode",
+    icon: <IconLock className="size-5" />,
+    description: "No unlock method available",
+    title: "Strict Mode",
+    options: {},
+    render: (props) => <StrictChallenge {...props} />,
   }),
 } as const;
 

@@ -4,13 +4,17 @@ import {
   updateBlockedSite,
   getStats,
   getSettings,
+  saveSettings,
   type BlockedSite,
   type SiteStats,
   type Settings,
   type UnlockMethod,
   type PatternRule,
+  type Schedule,
+  saveBlockedSites,
+  isSyncAvailable,
 } from "@/lib/storage";
-import { DEFAULT_AUTO_RELOCK } from "@/lib/consts";
+import { DEFAULT_AUTO_RELOCK, STORAGE_KEYS } from "@/lib/consts";
 import {
   CHALLENGES,
   getDefaultChallengeSettings,
@@ -21,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   IconPlus,
   IconTrash,
@@ -38,6 +43,9 @@ import {
 } from "@tabler/icons-react";
 
 type View = "main" | "add" | "edit" | "stats" | "settings";
+const DEFAULT_UNLOCK_METHOD: UnlockMethod = "timer";
+const isUnlockMethod = (value: string | undefined): value is UnlockMethod =>
+  !!value && value in CHALLENGES;
 
 const PatternRuleItem = memo(function PatternRuleItem({
   rule,
@@ -101,12 +109,18 @@ const SiteItem = memo(function SiteItem({
   onEdit: (site: BlockedSite) => void;
   onDelete: (id: string) => void;
 }) {
+  const resolvedMethod = isUnlockMethod(site.unlockMethod)
+    ? site.unlockMethod
+    : DEFAULT_UNLOCK_METHOD;
+  const challenge = CHALLENGES[resolvedMethod];
+  const settings = {
+    ...getDefaultChallengeSettings(resolvedMethod),
+    ...(isUnlockMethod(site.unlockMethod) ? site.challengeSettings : {}),
+  };
   const blockRules = site.rules.filter((r) => !r.allow);
   const allowRules = site.rules.filter((r) => r.allow);
-  const challenge = CHALLENGES[site.unlockMethod];
 
   const settingsSummary = useMemo(() => {
-    const settings = site.challengeSettings;
     const parts: string[] = [];
     for (const [key, opt] of Object.entries(challenge.options)) {
       const value = settings[key as keyof typeof settings];
@@ -115,13 +129,12 @@ const SiteItem = memo(function SiteItem({
       }
     }
     return parts.length > 0 ? parts.join(", ") : null;
-  }, [site.challengeSettings, challenge.options]);
+  }, [challenge.options, settings]);
 
   return (
     <div
-      className={`group p-3 rounded-lg transition-all ${
-        site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
-      }`}
+      className={`group p-3 rounded-lg transition-all ${site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
+        }`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -193,10 +206,10 @@ const SiteItem = memo(function SiteItem({
 
 const StatItem = memo(function StatItem({
   stat,
-  site,
+  title,
 }: {
   stat: SiteStats;
-  site: BlockedSite | undefined;
+  title: string;
 }) {
   const passRate =
     stat.visitCount > 0
@@ -206,7 +219,7 @@ const StatItem = memo(function StatItem({
   return (
     <div className="p-3 rounded-lg bg-muted/30">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium">{site?.name || "Unknown"}</span>
+        <span className="text-sm font-medium truncate">{title}</span>
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
@@ -250,6 +263,8 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>({ statsEnabled: true });
   const [loading, setLoading] = useState(true);
   const [editingSite, setEditingSite] = useState<BlockedSite | null>(null);
+  const [statsView, setStatsView] = useState<"filter" | "website">("filter");
+  const syncAvailable = isSyncAvailable();
 
   const [formName, setFormName] = useState("");
   const [formRules, setFormRules] = useState<PatternRule[]>([
@@ -262,6 +277,12 @@ export default function App() {
   const [formAutoRelock, setFormAutoRelock] = useState(
     String(DEFAULT_AUTO_RELOCK)
   );
+  const [formSchedule, setFormSchedule] = useState<Schedule>({
+    enabled: false,
+    days: [1, 2, 3, 4, 5],
+    start: "09:00",
+    end: "17:00",
+  });
 
   const loadData = useCallback(async () => {
     const [loadedSites, loadedStats, loadedSettings] = await Promise.all([
@@ -285,6 +306,12 @@ export default function App() {
     setFormMethod("timer");
     setFormChallengeSettings(getDefaultChallengeSettings("timer"));
     setFormAutoRelock(String(DEFAULT_AUTO_RELOCK));
+    setFormSchedule({
+      enabled: false,
+      days: [1, 2, 3, 4, 5],
+      start: "09:00",
+      end: "17:00",
+    });
     setEditingSite(null);
   }, []);
 
@@ -320,20 +347,20 @@ export default function App() {
       challengeSettings: formChallengeSettings,
       autoRelockAfter: formAutoRelock ? parseInt(formAutoRelock) : null,
       enabled: true,
+      schedule: formSchedule,
     };
 
-    if (editingSite) {
-      await updateBlockedSite(editingSite.id, siteData);
-    } else {
-      const sites = await getBlockedSites();
-      const newSite = {
-        ...siteData,
-        id: Math.random().toString(36).substring(2, 10),
-        createdAt: Date.now(),
-      };
-      sites.push(newSite);
-      await browser.storage.local.set({ ["blockedSites"]: sites });
-    }
+      if (editingSite) {
+        await updateBlockedSite(editingSite.id, siteData);
+      } else {
+        const sites = await getBlockedSites();
+        const newSite = {
+          ...siteData,
+          id: Math.random().toString(36).substring(2, 10),
+          createdAt: Date.now(),
+        };
+        await saveBlockedSites([...sites, newSite]);
+      }
 
     resetForm();
     setView("main");
@@ -344,22 +371,37 @@ export default function App() {
     formMethod,
     formChallengeSettings,
     formAutoRelock,
+    formSchedule,
     editingSite,
     resetForm,
     loadData,
   ]);
 
   const handleEditSite = useCallback((site: BlockedSite) => {
+    const resolvedMethod = isUnlockMethod(site.unlockMethod)
+      ? site.unlockMethod
+      : DEFAULT_UNLOCK_METHOD;
+    const defaultSettings = getDefaultChallengeSettings(resolvedMethod);
+    const normalizedSettings = {
+      ...defaultSettings,
+      ...(isUnlockMethod(site.unlockMethod) ? site.challengeSettings : {}),
+    };
     setEditingSite(site);
     setFormName(site.name);
     setFormRules(
       site.rules.length > 0 ? site.rules : [{ pattern: "", allow: false }]
     );
-    setFormMethod(site.unlockMethod);
-    setFormChallengeSettings(
-      site.challengeSettings ?? getDefaultChallengeSettings(site.unlockMethod)
-    );
+    setFormMethod(resolvedMethod);
+    setFormChallengeSettings(normalizedSettings);
     setFormAutoRelock(site.autoRelockAfter ? String(site.autoRelockAfter) : "");
+    setFormSchedule(
+      site.schedule || {
+        enabled: false,
+        days: [1, 2, 3, 4, 5],
+        start: "09:00",
+        end: "17:00",
+      }
+    );
     setView("edit");
   }, []);
 
@@ -373,10 +415,21 @@ export default function App() {
 
   const handleDeleteSite = useCallback(
     async (id: string) => {
-      const sites = await getBlockedSites();
-      await browser.storage.local.set({
-        ["blockedSites"]: sites.filter((s) => s.id !== id),
-      });
+      const [sites, stats] = await Promise.all([
+        getBlockedSites(),
+        getStats(),
+      ]);
+
+      await Promise.all([
+        saveBlockedSites(sites.filter((s) => s.id !== id)),
+        browser.storage.local.set({
+          [STORAGE_KEYS.STATS]: stats.filter(
+            (stat) =>
+              stat.scope !== "site" ||
+              (stat.siteId ?? stat.key) !== id
+          ),
+        }),
+      ]);
       loadData();
     },
     [loadData]
@@ -384,12 +437,12 @@ export default function App() {
 
   const handleToggleStats = useCallback(async () => {
     const newSettings = { ...settings, statsEnabled: !settings.statsEnabled };
-    await browser.storage.local.set({ ["settings"]: newSettings });
+    await saveSettings(newSettings);
     setSettings(newSettings);
   }, [settings]);
 
   const handleClearStats = useCallback(async () => {
-    await browser.storage.local.set({ ["stats"]: [] });
+    await browser.storage.local.set({ [STORAGE_KEYS.STATS]: [] });
     loadData();
   }, [loadData]);
 
@@ -418,6 +471,12 @@ export default function App() {
   const siteMap = useMemo(() => {
     return new Map(sites.map((s) => [s.id, s]));
   }, [sites]);
+
+  const statsForView = useMemo(() => {
+    return stats.filter((stat) =>
+      statsView === "filter" ? stat.scope === "site" : stat.scope === "domain"
+    );
+  }, [stats, statsView]);
 
   const isFormValid = useMemo(() => {
     return formName.trim() && formRules.some((r) => r.pattern.trim());
@@ -452,7 +511,18 @@ export default function App() {
           </h1>
         </div>
         {view === "main" && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              className="text-[10px] uppercase tracking-wide"
+              title={
+                syncAvailable
+                  ? "Sync storage available"
+                  : "Sync storage unavailable; using local storage"
+              }
+            >
+              {syncAvailable ? "Sync" : "Local"}
+            </Badge>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -566,18 +636,16 @@ export default function App() {
                           getDefaultChallengeSettings(method)
                         );
                       }}
-                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
-                        formMethod === method
-                          ? "bg-primary/15"
-                          : "bg-muted/30 hover:bg-muted/50"
-                      }`}
+                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${formMethod === method
+                        ? "bg-primary/15"
+                        : "bg-muted/30 hover:bg-muted/50"
+                        }`}
                     >
                       <div
-                        className={`p-2 rounded-md ${
-                          formMethod === method
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted/50 text-muted-foreground"
-                        }`}
+                        className={`p-2 rounded-md ${formMethod === method
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/50 text-muted-foreground"
+                          }`}
                       >
                         {challenge.icon}
                       </div>
@@ -618,25 +686,25 @@ export default function App() {
                           id={`option-${key}`}
                           type={
                             typeof (opt as { default: unknown }).default ===
-                            "number"
+                              "number"
                               ? "number"
                               : "text"
                           }
                           min={
                             typeof (opt as { default: unknown }).default ===
-                            "number"
+                              "number"
                               ? "1"
                               : undefined
                           }
                           value={String(
                             formChallengeSettings[
-                              key as keyof typeof formChallengeSettings
+                            key as keyof typeof formChallengeSettings
                             ] ?? (opt as { default: unknown }).default
                           )}
                           onChange={(e) => {
                             const value =
                               typeof (opt as { default: unknown }).default ===
-                              "number"
+                                "number"
                                 ? parseInt(e.target.value) || 0
                                 : e.target.value;
                             setFormChallengeSettings((prev) => ({
@@ -667,6 +735,85 @@ export default function App() {
               </p>
             </div>
 
+            <div className="space-y-3 pt-2 border-t border-border/30">
+              <div className="flex items-center justify-between">
+                <div className="grid gap-0.5">
+                  <Label>Active Schedule</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Only block during these times
+                  </p>
+                </div>
+                <Checkbox
+                  id="schedule"
+                  checked={formSchedule.enabled}
+                  onCheckedChange={(c: boolean | "indeterminate") =>
+                    setFormSchedule({ ...formSchedule, enabled: !!c })
+                  }
+                />
+              </div>
+
+              {formSchedule.enabled && (
+                <div className="space-y-3 p-3 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-top-2">
+                  <div className="flex justify-between gap-1">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          const newDays = formSchedule.days.includes(i)
+                            ? formSchedule.days.filter((d) => d !== i)
+                            : [...formSchedule.days, i];
+                          setFormSchedule({ ...formSchedule, days: newDays });
+                        }}
+                        className={`size-8 rounded-full text-xs font-medium transition-all ${formSchedule.days.includes(i)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Start Time</Label>
+                      <Input
+                        type="time"
+                        value={formSchedule.start}
+                        onChange={(e) =>
+                          setFormSchedule({
+                            ...formSchedule,
+                            start: e.target.value,
+                          })
+                        }
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">End Time</Label>
+                      <Input
+                        type="time"
+                        value={formSchedule.end}
+                        onChange={(e) =>
+                          setFormSchedule({
+                            ...formSchedule,
+                            end: e.target.value,
+                          })
+                        }
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                  {formSchedule.days.length === 0 && (
+                    <p className="text-xs text-destructive">
+                      Please select at least one day.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Button
               onClick={handleSaveSite}
               disabled={!isFormValid}
@@ -689,6 +836,26 @@ export default function App() {
 
         {view === "stats" && (
           <div className="space-y-3">
+            {settings.statsEnabled && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={statsView === "filter" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatsView("filter")}
+                  className="flex-1"
+                >
+                  Per Filter
+                </Button>
+                <Button
+                  variant={statsView === "website" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatsView("website")}
+                  className="flex-1"
+                >
+                  Per Website
+                </Button>
+              </div>
+            )}
             {!settings.statsEnabled ? (
               <Card className="bg-muted/30">
                 <CardContent className="pt-4">
@@ -706,20 +873,30 @@ export default function App() {
                   </div>
                 </CardContent>
               </Card>
-            ) : stats.length === 0 ? (
+            ) : statsForView.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <IconChartBar className="size-12 mx-auto mb-3 opacity-30" />
                 <p className="text-sm">No statistics yet</p>
                 <p className="text-xs mt-1">Visit blocked sites to see data</p>
               </div>
             ) : (
-              stats.map((stat) => (
-                <StatItem
-                  key={stat.siteId}
-                  stat={stat}
-                  site={siteMap.get(stat.siteId)}
-                />
-              ))
+              (() => {
+                return statsForView.map((stat) => {
+                  if (stat.scope === "domain") {
+                    const label = stat.domain ?? stat.key;
+                    return <StatItem key={`domain-${stat.key}`} stat={stat} title={label} />;
+                  }
+                  const siteId = stat.siteId ?? stat.key;
+                  const label = siteMap.get(siteId)?.name ?? "Unknown";
+                  return (
+                    <StatItem
+                      key={`site-${siteId}`}
+                      stat={stat}
+                      title={label}
+                    />
+                  );
+                });
+              })()
             )}
           </div>
         )}

@@ -1,0 +1,25 @@
+import { memo } from "react";
+import { IconLock } from "@tabler/icons-react";
+import type { ChallengeComponentProps } from "./index";
+
+type EmptySettings = Record<string, never>;
+
+export const StrictChallenge = memo(
+  (_props: ChallengeComponentProps<EmptySettings>) => {
+    return (
+      <div className="space-y-3 text-center">
+        <div className="flex items-center justify-center text-destructive">
+          <IconLock className="size-6" />
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium">Strict mode enabled</p>
+          <p className="text-sm text-muted-foreground">
+            There is no unlock method for this site.
+          </p>
+        </div>
+      </div>
+    );
+  }
+);
+
+StrictChallenge.displayName = "StrictChallenge";

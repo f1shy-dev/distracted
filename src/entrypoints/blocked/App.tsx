@@ -16,7 +16,12 @@ import {
   IconArrowLeft,
   IconLockOpen,
 } from "@tabler/icons-react";
-import { CHALLENGES, type ChallengeSettingsMap } from "@/components/challenges";
+import {
+  CHALLENGES,
+  type ChallengeSettingsMap,
+  getDefaultChallengeSettings,
+  type UnlockMethod,
+} from "@/components/challenges";
 
 export default function BlockedPage() {
   const [blockedSite, setBlockedSite] = useState<BlockedSite | null>(null);
@@ -27,6 +32,7 @@ export default function BlockedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [domain, setDomain] = useState<string | null>(null);
   const visitTracked = useRef(false);
   const siteIdRef = useRef<string | null>(null);
 
@@ -42,6 +48,13 @@ export default function BlockedPage() {
     }
 
     setOriginalUrl(url);
+    let parsedDomain: string | null = null;
+    try {
+      parsedDomain = new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      parsedDomain = null;
+    }
+    setDomain(parsedDomain);
     siteIdRef.current = siteId;
 
     (async () => {
@@ -73,6 +86,7 @@ export default function BlockedPage() {
             await browser.runtime.sendMessage({
               type: "UPDATE_STATS",
               siteId: result.site.id,
+              domain: parsedDomain,
               update: { incrementVisit: true },
             });
           }
@@ -144,6 +158,7 @@ export default function BlockedPage() {
           await browser.runtime.sendMessage({
             type: "UPDATE_STATS",
             siteId: blockedSite.id,
+            domain,
             update: { incrementPassed: true },
           });
         }
@@ -158,7 +173,7 @@ export default function BlockedPage() {
       setError("Failed to unlock site");
       setUnlocking(false);
     }
-  }, [blockedSite, originalUrl, statsEnabled, alreadyUnlocked]);
+  }, [blockedSite, originalUrl, statsEnabled, alreadyUnlocked, domain]);
 
   const handleGoBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -198,13 +213,22 @@ export default function BlockedPage() {
     return null;
   }
 
-  const challenge = CHALLENGES[blockedSite.unlockMethod];
+  const resolvedMethod: UnlockMethod =
+    blockedSite.unlockMethod in CHALLENGES
+      ? blockedSite.unlockMethod
+      : "timer";
+  const challenge = CHALLENGES[resolvedMethod];
   const challengeSettings =
-    blockedSite.challengeSettings as typeof challenge extends {
+    ({
+      ...getDefaultChallengeSettings(resolvedMethod),
+      ...(blockedSite.unlockMethod in CHALLENGES
+        ? blockedSite.challengeSettings
+        : {}),
+    } as typeof challenge extends {
       render: (props: infer P extends { settings: any }) => any;
     }
       ? P["settings"]
-      : never;
+      : never);
 
   return (
     <div
