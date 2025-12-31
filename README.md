@@ -3,6 +3,7 @@
 blocks distracting websites! do mini tasks to get back on them...
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ggimjhcfchbfdhpehdekdiblbfmijngf?label=chrome%20web%20store&style=for-the-badge)](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
+[![Firefox Add-ons](https://img.shields.io/amo/v/distracted?label=firefox%20add-ons&style=for-the-badge)](https://addons.mozilla.org/en-GB/firefox/addon/distracted/)
 
 ## what?
 
@@ -16,7 +17,9 @@ blocks distracting websites! do mini tasks to get back on them...
 
 ## how to install
 
-**chrome/chromium (recommended):** install from the [chrome web store](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
+**chrome/chromium:** install from the [chrome web store](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
+
+**firefox:** install from [firefox add-ons](https://addons.mozilla.org/en-GB/firefox/addon/distracted/)
 
 **manual install (all browsers/dev builds):**
 
