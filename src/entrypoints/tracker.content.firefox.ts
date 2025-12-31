@@ -1,6 +1,5 @@
 export default defineContentScript({
   matches: ["<all_urls>"],
-  exclude: ["chrome"],
   async main() {
     const url = window.location.href;
     let domain: string | null = null;
@@ -9,7 +8,11 @@ export default defineContentScript({
     let timer: number | undefined;
 
     // Check if valid page (not internal)
-    if (url.startsWith("chrome:") || url.startsWith("about:") || url.includes("blocked.html")) {
+    if (
+      url.startsWith("chrome:") ||
+      url.startsWith("about:") ||
+      url.includes("blocked.html")
+    ) {
       return;
     }
 
