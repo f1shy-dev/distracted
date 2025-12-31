@@ -6,7 +6,7 @@ import {
   type SiteStats,
   type StatsScope,
 } from "@/lib/storage";
-import { STORAGE_KEYS } from "@/lib/consts";
+import { STORAGE_KEYS, TIME_TRACK_ALARM } from "@/lib/consts";
 import * as dnr from "./blockers/dnr";
 import * as webRequest from "./blockers/webRequest";
 import { isInternalUrl } from "./utils";
@@ -16,7 +16,6 @@ console.log(`[distracted] background entry`, {
   isMV3,
 });
 
-const TIME_TRACK_ALARM = "time_wasted_tick";
 let statsEnabled = true;
 
 async function syncRules(): Promise<void> {
