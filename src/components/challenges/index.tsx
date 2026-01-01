@@ -100,6 +100,11 @@ export const CHALLENGES = {
         default: "http://localhost:8765",
         description: "Claude Blocker server base URL",
       },
+      allowWhileWaitingForInput: {
+        label: "Allow while waiting for input",
+        default: false,
+        description: "Keep access open when Claude is waiting for your reply",
+      },
     },
     render: (props) => <ClaudeBlockerChallenge {...props} />,
   }),

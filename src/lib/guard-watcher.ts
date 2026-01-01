@@ -85,7 +85,7 @@ export function startGuardWatcher({
     socket.addEventListener("message", (event) => {
       try {
         const payload = JSON.parse(event.data as string);
-        const state = guard.parseWebSocketMessage?.(payload);
+        const state = guard.parseWebSocketMessage?.(payload, settings as never);
         if (state) {
           handleGuardState(state);
         }

@@ -7,7 +7,7 @@ import {
 
 export type UnlockGuardState = {
   active: boolean;
-  reason?: "invalid_url" | "server_error" | "offline" | "idle";
+  reason?: "invalid_url" | "server_error" | "offline" | "idle" | "waiting";
   message?: string;
 };
 
@@ -15,7 +15,7 @@ export type UnlockGuardDefinition<Settings = unknown> = {
   method: UnlockMethod;
   check: (settings: Settings) => Promise<UnlockGuardState>;
   getWebSocketUrl?: (settings: Settings) => string | null;
-  parseWebSocketMessage?: (payload: unknown) => UnlockGuardState | null;
+  parseWebSocketMessage?: (payload: unknown, settings: Settings) => UnlockGuardState | null;
   pollIntervalMs?: number;
 };
 
@@ -25,8 +25,28 @@ export const UNLOCK_GUARDS: Partial<Record<UnlockMethod, UnlockGuardDefinition>>
   claude: {
     method: "claude",
     check: async (settings) => {
-      const config = settings as { serverUrl?: string } | null | undefined;
+      const config = settings as
+        | { serverUrl?: string; allowWhileWaitingForInput?: boolean }
+        | null
+        | undefined;
       const result = await getClaudeBlockerStatus(config?.serverUrl ?? "");
+
+      if (!result.active && result.waitingForInput > 0 && config?.allowWhileWaitingForInput) {
+        return {
+          active: true,
+          reason: undefined,
+          message: undefined,
+        };
+      }
+
+      if (result.waitingForInput > 0 && !result.active) {
+        return {
+          active: false,
+          reason: "waiting",
+          message: "Claude is waiting for your input.",
+        };
+      }
+
       return {
         active: result.active,
         reason: result.reason,
@@ -43,12 +63,33 @@ export const UNLOCK_GUARDS: Partial<Record<UnlockMethod, UnlockGuardDefinition>>
       };
     },
     getWebSocketUrl: (settings) => {
-      const config = settings as { serverUrl?: string } | null | undefined;
+      const config = settings as
+        | { serverUrl?: string; allowWhileWaitingForInput?: boolean }
+        | null
+        | undefined;
       return resolveClaudeBlockerWebSocketUrl(config?.serverUrl ?? "");
     },
-    parseWebSocketMessage: (payload) => {
+    parseWebSocketMessage: (payload, settings) => {
+      const config = settings as { allowWhileWaitingForInput?: boolean } | null | undefined;
       const result = parseClaudeBlockerStateMessage(payload);
       if (!result) return null;
+
+      if (!result.active && result.waitingForInput > 0 && config?.allowWhileWaitingForInput) {
+        return {
+          active: true,
+          reason: undefined,
+          message: undefined,
+        };
+      }
+
+      if (result.waitingForInput > 0 && !result.active) {
+        return {
+          active: false,
+          reason: "waiting",
+          message: "Claude is waiting for your input.",
+        };
+      }
+
       return {
         active: result.active,
         reason: result.reason,
