@@ -26,8 +26,8 @@ console.log(`[distracted] background entry`, {
 
 let statsEnabled = true;
 
-const GUARD_HEARTBEAT_MS = 5000;
-const GUARD_WATCHDOG_MS = 15000;
+const GUARD_HEARTBEAT_MS = 3000;
+const GUARD_WATCHDOG_MS = 12000;
 const guardWatchers = new Map<string, GuardWatcherHandle>();
 
 type GuardEntry = {
@@ -47,8 +47,8 @@ async function ensureOffscreenDocument(): Promise<void> {
     url: browser.runtime.getURL(
       "/offscreen.html" as unknown as Parameters<typeof browser.runtime.getURL>[0],
     ),
-    reasons: ["WEB_SOCKET"],
-    justification: "Maintain unlock guards that require real-time server state.",
+    reasons: ["WORKERS"],
+    justification: "Maintain unlock guards that require real-time server state via WebSocket.",
   });
 }
 
