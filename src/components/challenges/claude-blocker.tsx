@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useState, memo } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  IconAlertTriangle,
-  IconCheck,
-  IconRefresh,
-  IconServer,
-} from "@tabler/icons-react";
+import { IconAlertTriangle, IconCheck, IconRefresh, IconServer } from "@tabler/icons-react";
 import { getClaudeBlockerStatus } from "@/lib/claude-blocker";
 import type { ChallengeComponentProps } from "./index";
 
@@ -44,9 +39,7 @@ export const ClaudeBlockerChallenge = memo(
       if (result.reason === "server_error") {
         setStatus("error");
         setMessage(
-          result.statusCode
-            ? `Server responded with ${result.statusCode}.`
-            : "Server error.",
+          result.statusCode ? `Server responded with ${result.statusCode}.` : "Server error.",
         );
         return;
       }
@@ -110,9 +103,7 @@ export const ClaudeBlockerChallenge = memo(
           variant={completed ? "outline" : "default"}
           disabled={status === "checking" || completed}
         >
-          <IconRefresh
-            className={`size-4 ${status === "checking" ? "animate-spin" : ""}`}
-          />
+          <IconRefresh className={`size-4 ${status === "checking" ? "animate-spin" : ""}`} />
           {status === "checking"
             ? "Checking..."
             : completed
@@ -120,9 +111,7 @@ export const ClaudeBlockerChallenge = memo(
               : "Check Claude Status"}
         </Button>
 
-        {message && (
-          <p className="text-xs text-center text-muted-foreground">{message}</p>
-        )}
+        {message && <p className="text-xs text-center text-muted-foreground">{message}</p>}
       </div>
     );
   },

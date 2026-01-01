@@ -9,21 +9,13 @@ export function ChallengeInstructionsPanel({
   instructions,
   className,
 }: ChallengeInstructionsPanelProps) {
-  const {
-    title = "Setup instructions",
-    summary,
-    steps = [],
-    commands = [],
-    note,
-  } = instructions;
+  const { title = "Setup instructions", summary, steps = [], commands = [], note } = instructions;
 
   return (
     <details
       className={`rounded-lg border border-border/40 bg-muted/20 p-3 text-xs ${className ?? ""}`}
     >
-      <summary className="cursor-pointer text-sm font-medium text-foreground">
-        {title}
-      </summary>
+      <summary className="cursor-pointer text-sm font-medium text-foreground">{title}</summary>
       <div className="mt-3 space-y-2 text-muted-foreground">
         {summary && <p>{summary}</p>}
         {steps.length > 0 && (

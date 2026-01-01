@@ -1,10 +1,4 @@
-import {
-  IconClock,
-  IconHandStop,
-  IconKeyboard,
-  IconLock,
-  IconServer,
-} from "@tabler/icons-react";
+import { IconClock, IconHandStop, IconKeyboard, IconLock, IconServer } from "@tabler/icons-react";
 import { TimerChallenge } from "./timer";
 import { HoldChallenge } from "./hold";
 import { TypeChallenge } from "./type";
@@ -91,8 +85,7 @@ export const CHALLENGES = {
     title: "Claude Blocker",
     instructions: {
       title: "Claude Blocker setup",
-      summary:
-        "This unlock method only succeeds while Claude Code is actively running inference.",
+      summary: "This unlock method only succeeds while Claude Code is actively running inference.",
       steps: [
         "Install and start the local Claude Blocker server (this also installs Claude Code hooks).",
         "Keep the server running while you work in Claude Code.",

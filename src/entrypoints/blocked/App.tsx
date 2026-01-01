@@ -118,9 +118,7 @@ export default function BlockedPage() {
         const claudeSettings = blockedSite.challengeSettings as {
           serverUrl?: string;
         };
-        const result = await getClaudeBlockerStatus(
-          claudeSettings.serverUrl ?? "",
-        );
+        const result = await getClaudeBlockerStatus(claudeSettings.serverUrl ?? "");
         if (!result.active) {
           const message =
             result.reason === "invalid_url"

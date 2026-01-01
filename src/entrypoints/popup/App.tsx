@@ -125,7 +125,9 @@ const SiteItem = memo(function SiteItem({
     for (const key of Object.keys(challenge.options)) {
       const value = settings[key as keyof typeof settings];
       if (value !== undefined) {
-        parts.push(`${value}${key === "duration" ? "s" : ""}`);
+        const displayValue =
+          typeof value === "boolean" ? (value ? "on" : "off") : String(value);
+        parts.push(`${displayValue}${key === "duration" ? "s" : ""}`);
       }
     }
     return parts.length > 0 ? parts.join(", ") : null;
@@ -663,9 +665,7 @@ export default function App() {
             })()}
 
             {CHALLENGES[formMethod].instructions && (
-              <ChallengeInstructionsPanel
-                instructions={CHALLENGES[formMethod].instructions}
-              />
+              <ChallengeInstructionsPanel instructions={CHALLENGES[formMethod].instructions} />
             )}
 
             <div className="space-y-2">

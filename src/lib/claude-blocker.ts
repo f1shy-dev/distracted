@@ -10,18 +10,14 @@ export function resolveClaudeBlockerStatusUrl(serverUrl: string): string | null 
   const trimmed = serverUrl.trim();
   if (!trimmed) return null;
   try {
-    const base = trimmed.match(/^https?:\/\//)
-      ? trimmed
-      : `http://${trimmed}`;
+    const base = trimmed.match(/^https?:\/\//) ? trimmed : `http://${trimmed}`;
     return new URL("/status", base).toString();
   } catch {
     return null;
   }
 }
 
-export async function getClaudeBlockerStatus(
-  serverUrl: string,
-): Promise<ClaudeBlockerCheckResult> {
+export async function getClaudeBlockerStatus(serverUrl: string): Promise<ClaudeBlockerCheckResult> {
   const statusUrl = resolveClaudeBlockerStatusUrl(serverUrl);
   if (!statusUrl) {
     return { active: false, blocked: true, working: 0, reason: "invalid_url" };
@@ -45,11 +41,8 @@ export async function getClaudeBlockerStatus(
     };
 
     const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-    const working = sessions.filter(
-      (session) => session?.status === "working",
-    ).length;
-    const blocked =
-      typeof data.blocked === "boolean" ? data.blocked : working === 0;
+    const working = sessions.filter((session) => session?.status === "working").length;
+    const blocked = typeof data.blocked === "boolean" ? data.blocked : working === 0;
     const active = !blocked && working > 0;
 
     return {
