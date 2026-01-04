@@ -1,8 +1,9 @@
-import { IconClock, IconHandStop, IconKeyboard, IconLock } from "@tabler/icons-react";
+import { IconClock, IconHandStop, IconKeyboard, IconLock, IconServer } from "@tabler/icons-react";
 import { TimerChallenge } from "./timer";
 import { HoldChallenge } from "./hold";
 import { TypeChallenge } from "./type";
 import { StrictChallenge } from "./strict";
+import { ClaudeBlockerChallenge } from "./claude-blocker";
 
 type ChallengeOptionValue = number | string | boolean;
 type ChallengeOptions = Record<string, ChallengeOptionValue>;
@@ -11,6 +12,14 @@ export interface ChallengeComponentProps<Options extends ChallengeOptions> {
   settings: Options;
   onComplete: () => void;
 }
+
+export type ChallengeInstructions = {
+  title?: string;
+  summary?: string;
+  steps?: string[];
+  commands?: string[];
+  note?: string;
+};
 
 type OptionDefinition<T extends ChallengeOptionValue> = {
   label: string;
@@ -23,6 +32,7 @@ type Challenge<Options extends ChallengeOptions = ChallengeOptions> = {
   icon: React.ReactNode;
   description: string;
   title: string;
+  instructions?: ChallengeInstructions;
   options: {
     [K in keyof Options]: OptionDefinition<Options[K]>;
   };
@@ -67,6 +77,36 @@ export const CHALLENGES = {
     title: "Type to Access",
     options: {},
     render: (props) => <TypeChallenge {...props} />,
+  }),
+  claude: define({
+    label: "Claude Blocker",
+    icon: <IconServer className="size-5" />,
+    description: "Unlock only while Claude Code is actively working",
+    title: "Claude Blocker",
+    instructions: {
+      title: "Claude Blocker setup",
+      summary: "This unlock method only succeeds while Claude Code is actively running inference.",
+      steps: [
+        "Install and start the local Claude Blocker server (this also installs Claude Code hooks).",
+        "Keep the server running while you work in Claude Code.",
+        "If you change the server port, update the Server URL below.",
+      ],
+      commands: ["npx claude-blocker --setup"],
+      note: "If the server is offline or Claude is idle, the site stays locked.",
+    },
+    options: {
+      serverUrl: {
+        label: "Server URL",
+        default: "http://localhost:8765",
+        description: "Claude Blocker server base URL",
+      },
+      allowWhileWaitingForInput: {
+        label: "Allow while waiting for input",
+        default: false,
+        description: "Keep access open when Claude is waiting for your reply",
+      },
+    },
+    render: (props) => <ClaudeBlockerChallenge {...props} />,
   }),
   strict: define({
     label: "Strict Mode",

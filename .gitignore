@@ -30,3 +30,4 @@ web-ext.config.ts
 .env
 .env.*
 !.env.example
+.tmp

@@ -16,7 +16,7 @@ export default defineConfig({
     // MV2 Firefox uses webRequest blocking (needs host permissions)
     const permissions = isFirefox
       ? [...basePermissions, "webRequest", "webRequestBlocking"]
-      : [...basePermissions, "declarativeNetRequest"];
+      : [...basePermissions, "declarativeNetRequest", "offscreen"];
 
     // Only Firefox MV2 needs host permissions for webRequest
     const hostPermissions = isFirefox ? ["<all_urls>"] : [];

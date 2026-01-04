@@ -4,7 +4,8 @@ import { isInternalUrl } from "../utils";
 
 interface UnlockState {
   siteId: string;
-  expiresAt: number;
+  expiresAt: number | null;
+  mode?: "timed" | "continuous";
 }
 
 export async function syncDnrRules(): Promise<void> {
@@ -19,7 +20,8 @@ export async function syncDnrRules(): Promise<void> {
   for (const [key, value] of Object.entries(session)) {
     if (key.startsWith(UNLOCK_PREFIX)) {
       const state = value as any;
-      if (state.expiresAt > now) {
+      const mode = state.mode ?? "timed";
+      if (mode === "continuous" || (state.expiresAt ?? 0) > now) {
         unlockedIds.add(state.siteId);
       }
     }
@@ -123,11 +125,11 @@ export async function syncDnrRules(): Promise<void> {
 export async function grantAccess(
   siteId: string,
   durationMinutes: number | null,
-): Promise<{ expiresAt: number }> {
-  const durationMs = (durationMinutes ?? 60) * 60 * 1000;
-  const expiresAt = Date.now() + durationMs;
+  mode: "timed" | "continuous" = "timed",
+): Promise<{ expiresAt: number | null }> {
+  const expiresAt = mode === "continuous" ? null : Date.now() + (durationMinutes ?? 60) * 60 * 1000;
 
-  const state: UnlockState = { siteId, expiresAt };
+  const state: UnlockState = { siteId, expiresAt, mode };
   await browser.storage.session.set({
     [`${UNLOCK_PREFIX}${siteId}`]: state,
   });
@@ -135,11 +137,18 @@ export async function grantAccess(
   await syncDnrRules();
 
   const alarmName = `${ALARM_PREFIX}${siteId}`;
-  await browser.alarms.create(alarmName, {
-    when: expiresAt,
-  });
+  await browser.alarms.clear(alarmName);
+  if (expiresAt !== null) {
+    await browser.alarms.create(alarmName, {
+      when: expiresAt,
+    });
+  }
 
-  console.log(`[distracted] Granted access to site ${siteId} for ${durationMinutes ?? 60} minutes`);
+  console.log(
+    `[distracted] Granted ${mode} access to site ${siteId}${
+      mode === "timed" ? ` for ${durationMinutes ?? 60} minutes` : ""
+    }`,
+  );
 
   return { expiresAt };
 }
@@ -189,7 +198,9 @@ export async function isSiteUnlocked(siteId: string): Promise<boolean> {
   const state = result[`${UNLOCK_PREFIX}${siteId}`] as UnlockState | undefined;
 
   if (!state) return false;
-  if (state.expiresAt <= Date.now()) {
+  const mode = state.mode ?? "timed";
+  if (mode === "continuous") return true;
+  if ((state.expiresAt ?? 0) <= Date.now()) {
     await browser.storage.session.remove(`${UNLOCK_PREFIX}${siteId}`);
     return false;
   }
@@ -202,7 +213,9 @@ export async function getUnlockState(siteId: string): Promise<UnlockState | null
   const state = result[`${UNLOCK_PREFIX}${siteId}`] as UnlockState | undefined;
 
   if (!state) return null;
-  if (state.expiresAt <= Date.now()) {
+  const mode = state.mode ?? "timed";
+  if (mode === "continuous") return state;
+  if ((state.expiresAt ?? 0) <= Date.now()) {
     await browser.storage.session.remove(`${UNLOCK_PREFIX}${siteId}`);
     return null;
   }
@@ -230,7 +243,8 @@ export async function initializeDnr(): Promise<void> {
   for (const [key, value] of Object.entries(session)) {
     if (key.startsWith(UNLOCK_PREFIX)) {
       const state = value as UnlockState;
-      if (state.expiresAt <= now) {
+      const mode = state.mode ?? "timed";
+      if (mode !== "continuous" && (state.expiresAt ?? 0) <= now) {
         await browser.storage.session.remove(key);
         await browser.alarms.clear(`${ALARM_PREFIX}${state.siteId}`);
       }

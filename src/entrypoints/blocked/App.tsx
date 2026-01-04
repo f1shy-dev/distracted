@@ -10,6 +10,9 @@ import {
   IconLockOpen,
 } from "@tabler/icons-react";
 import { CHALLENGES } from "@/components/challenges";
+import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
+import { getUnlockGuard, isContinuousUnlockMethod } from "@/lib/unlock-guards";
+import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";
 
 export default function BlockedPage() {
   const [blockedSite, setBlockedSite] = useState<BlockedSite | null>(null);
@@ -78,7 +81,11 @@ export default function BlockedPage() {
   }, []);
 
   useEffect(() => {
-    const handleMessage = (message: { type: string; siteId?: string; expiresAt?: number }) => {
+    const handleMessage = (message: {
+      type: string;
+      siteId?: string;
+      expiresAt?: number | null;
+    }) => {
       if (!siteIdRef.current) return;
 
       if (message.type === "SITE_UNLOCKED" && message.siteId === siteIdRef.current) {
@@ -110,6 +117,18 @@ export default function BlockedPage() {
       if (alreadyUnlocked) {
         window.location.href = originalUrl;
         return;
+      }
+
+      if (isContinuousUnlockMethod(blockedSite.unlockMethod)) {
+        const guard = getUnlockGuard(blockedSite.unlockMethod);
+        if (guard) {
+          const state = await guard.check(blockedSite.challengeSettings);
+          if (!state.active) {
+            setError(state.message ?? "Unlock condition not met.");
+            setUnlocking(false);
+            return;
+          }
+        }
       }
 
       const result = await browser.runtime.sendMessage({
@@ -258,6 +277,19 @@ export default function BlockedPage() {
             </div>
           )}
 
+          {!alreadyUnlocked && challenge.instructions && (
+            <ChallengeInstructionsPanel instructions={challenge.instructions}>
+              {blockedSite.unlockMethod === "claude" && (
+                <ClaudeBlockerDebug
+                  settings={
+                    challengeSettings as { serverUrl: string; allowWhileWaitingForInput?: boolean }
+                  }
+                  onComplete={() => {}}
+                />
+              )}
+            </ChallengeInstructionsPanel>
+          )}
+
           {challengeComplete && (
             <Button onClick={handleUnlock} className="w-full" size="lg" disabled={unlocking}>
               {unlocking ? (
@@ -271,12 +303,14 @@ export default function BlockedPage() {
             </Button>
           )}
 
-          {blockedSite.autoRelockAfter && !alreadyUnlocked && (
-            <p className="text-xs text-center text-muted-foreground">
-              Access will expire after {blockedSite.autoRelockAfter} minute
-              {blockedSite.autoRelockAfter > 1 ? "s" : ""}
-            </p>
-          )}
+          {blockedSite.autoRelockAfter &&
+            !alreadyUnlocked &&
+            !isContinuousUnlockMethod(blockedSite.unlockMethod) && (
+              <p className="text-xs text-center text-muted-foreground">
+                Access will expire after {blockedSite.autoRelockAfter} minute
+                {blockedSite.autoRelockAfter > 1 ? "s" : ""}
+              </p>
+            )}
         </CardContent>
       </Card>
 

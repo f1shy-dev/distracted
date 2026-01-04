@@ -4,7 +4,8 @@ import { isInternalUrl } from "../utils";
 
 interface UnlockState {
   siteId: string;
-  expiresAt: number;
+  expiresAt: number | null;
+  mode?: "timed" | "continuous";
 }
 
 let cachedSites: BlockedSite[] = [];
@@ -40,7 +41,8 @@ export async function initializeWebRequest(): Promise<void> {
         }
 
         const unlockState = unlockedSites.get(site.id);
-        if (unlockState && unlockState.expiresAt > Date.now()) {
+        const mode = unlockState?.mode ?? "timed";
+        if (unlockState && (mode === "continuous" || (unlockState.expiresAt ?? 0) > Date.now())) {
           continue;
         }
 
@@ -71,15 +73,18 @@ export async function initializeWebRequest(): Promise<void> {
 export async function grantAccess(
   siteId: string,
   durationMinutes: number | null,
-): Promise<{ expiresAt: number }> {
-  const durationMs = (durationMinutes ?? 60) * 60 * 1000;
-  const expiresAt = Date.now() + durationMs;
+  mode: "timed" | "continuous" = "timed",
+): Promise<{ expiresAt: number | null }> {
+  const expiresAt = mode === "continuous" ? null : Date.now() + (durationMinutes ?? 60) * 60 * 1000;
 
-  unlockedSites.set(siteId, { siteId, expiresAt });
+  unlockedSites.set(siteId, { siteId, expiresAt, mode });
 
-  await browser.alarms.create(`${ALARM_PREFIX}${siteId}`, {
-    when: expiresAt,
-  });
+  await browser.alarms.clear(`${ALARM_PREFIX}${siteId}`);
+  if (expiresAt !== null) {
+    await browser.alarms.create(`${ALARM_PREFIX}${siteId}`, {
+      when: expiresAt,
+    });
+  }
 
   return { expiresAt };
 }
@@ -116,7 +121,9 @@ export async function isSiteUnlocked(siteId: string): Promise<boolean> {
   const state = unlockedSites.get(siteId);
   if (!state) return false;
 
-  if (state.expiresAt <= Date.now()) {
+  const mode = state.mode ?? "timed";
+  if (mode === "continuous") return true;
+  if ((state.expiresAt ?? 0) <= Date.now()) {
     unlockedSites.delete(siteId);
     return false;
   }
@@ -128,7 +135,9 @@ export async function getUnlockState(siteId: string): Promise<UnlockState | null
   const state = unlockedSites.get(siteId);
   if (!state) return null;
 
-  if (state.expiresAt <= Date.now()) {
+  const mode = state.mode ?? "timed";
+  if (mode === "continuous") return state;
+  if ((state.expiresAt ?? 0) <= Date.now()) {
     unlockedSites.delete(siteId);
     return null;
   }

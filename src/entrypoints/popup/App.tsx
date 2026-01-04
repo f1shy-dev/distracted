@@ -20,6 +20,9 @@ import {
   getDefaultChallengeSettings,
   type ChallengeSettingsMap,
 } from "@/components/challenges";
+import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
+import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";
+import { isContinuousUnlockMethod } from "@/lib/unlock-guards";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,7 +127,8 @@ const SiteItem = memo(function SiteItem({
     for (const key of Object.keys(challenge.options)) {
       const value = settings[key as keyof typeof settings];
       if (value !== undefined) {
-        parts.push(`${value}${key === "duration" ? "s" : ""}`);
+        const displayValue = typeof value === "boolean" ? (value ? "on" : "off") : String(value);
+        parts.push(`${displayValue}${key === "duration" ? "s" : ""}`);
       }
     }
     return parts.length > 0 ? parts.join(", ") : null;
@@ -661,20 +665,42 @@ export default function App() {
               );
             })()}
 
-            <div className="space-y-2">
-              <Label htmlFor="relock">Auto-relock (minutes)</Label>
-              <Input
-                id="relock"
-                type="number"
-                min="1"
-                placeholder="Never"
-                value={formAutoRelock}
-                onChange={(e) => setFormAutoRelock(e.target.value)}
-              />
+            {CHALLENGES[formMethod].instructions && (
+              <ChallengeInstructionsPanel instructions={CHALLENGES[formMethod].instructions}>
+                {formMethod === "claude" && (
+                  <ClaudeBlockerDebug
+                    settings={
+                      formChallengeSettings as {
+                        serverUrl: string;
+                        allowWhileWaitingForInput?: boolean;
+                      }
+                    }
+                    onComplete={() => {}}
+                  />
+                )}
+              </ChallengeInstructionsPanel>
+            )}
+
+            {!isContinuousUnlockMethod(formMethod) ? (
+              <div className="space-y-2">
+                <Label htmlFor="relock">Auto-relock (minutes)</Label>
+                <Input
+                  id="relock"
+                  type="number"
+                  min="1"
+                  placeholder="Never"
+                  value={formAutoRelock}
+                  onChange={(e) => setFormAutoRelock(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  How long until the site is blocked again after unlocking
+                </p>
+              </div>
+            ) : (
               <p className="text-xs text-muted-foreground">
-                How long until the site is blocked again after unlocking
+                Access stays open only while the unlock condition is active.
               </p>
-            </div>
+            )}
 
             <div className="space-y-3 pt-2 border-t border-border/30">
               <div className="flex items-center justify-between">

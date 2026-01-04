@@ -3,13 +3,21 @@ import {
   getBlockedSites,
   getSettings,
   normalizeStats,
+  type BlockedSite,
   type SiteStats,
   type StatsScope,
+  type UnlockMethod,
 } from "@/lib/storage";
-import { STORAGE_KEYS, TIME_TRACK_ALARM } from "@/lib/consts";
+import { GUARD_ALARM_PREFIX, GUARD_PREFIX, STORAGE_KEYS, TIME_TRACK_ALARM } from "@/lib/consts";
+import {
+  getUnlockGuard,
+  isContinuousUnlockMethod,
+  type UnlockGuardState,
+} from "@/lib/unlock-guards";
 import * as dnr from "./blockers/dnr";
 import * as webRequest from "./blockers/webRequest";
 import { isInternalUrl } from "./utils";
+import { startGuardWatcher, type GuardWatcherHandle } from "@/lib/guard-watcher";
 
 const isMV3 = import.meta.env.MANIFEST_VERSION === 3;
 console.log(`[distracted] background entry`, {
@@ -17,6 +25,226 @@ console.log(`[distracted] background entry`, {
 });
 
 let statsEnabled = true;
+
+const GUARD_HEARTBEAT_MS = 3000;
+const GUARD_WATCHDOG_MS = 12000;
+const guardWatchers = new Map<string, GuardWatcherHandle>();
+
+type GuardEntry = {
+  siteId: string;
+  method: UnlockMethod;
+  settings: unknown;
+};
+
+const offscreenApi = (globalThis as { chrome?: { offscreen?: any } }).chrome?.offscreen;
+
+async function ensureOffscreenDocument(): Promise<void> {
+  if (!isMV3 || !offscreenApi) return;
+  const hasDocument = (await offscreenApi.hasDocument?.()) as boolean | undefined;
+  if (hasDocument) return;
+
+  await offscreenApi.createDocument?.({
+    url: browser.runtime.getURL(
+      "/offscreen.html" as unknown as Parameters<typeof browser.runtime.getURL>[0],
+    ),
+    reasons: ["WORKERS"],
+    justification: "Maintain unlock guards that require real-time server state via WebSocket.",
+  });
+}
+
+async function maybeCloseOffscreenDocument(): Promise<void> {
+  if (!isMV3 || !offscreenApi) return;
+  const session = await browser.storage.session.get();
+  const hasGuards = Object.keys(session).some((key) => key.startsWith(GUARD_PREFIX));
+  if (!hasGuards) {
+    const hasDocument = (await offscreenApi.hasDocument?.()) as boolean | undefined;
+    if (hasDocument) {
+      await offscreenApi.closeDocument?.();
+    }
+  }
+}
+
+async function scheduleGuardWatchdog(siteId: string): Promise<void> {
+  await browser.alarms.create(`${GUARD_ALARM_PREFIX}${siteId}`, {
+    when: Date.now() + GUARD_WATCHDOG_MS,
+  });
+}
+
+async function clearGuardWatchdog(siteId: string): Promise<void> {
+  await browser.alarms.clear(`${GUARD_ALARM_PREFIX}${siteId}`);
+}
+
+async function saveGuardEntry(entry: GuardEntry): Promise<void> {
+  await browser.storage.session.set({
+    [`${GUARD_PREFIX}${entry.siteId}`]: entry,
+  });
+}
+
+async function removeGuardEntry(siteId: string): Promise<void> {
+  await browser.storage.session.remove(`${GUARD_PREFIX}${siteId}`);
+  await clearGuardWatchdog(siteId);
+}
+
+async function startGuardWatcherForEntry(entry: GuardEntry): Promise<void> {
+  if (guardWatchers.has(entry.siteId)) return;
+
+  const watcher = startGuardWatcher({
+    method: entry.method,
+    settings: entry.settings,
+    heartbeatMs: GUARD_HEARTBEAT_MS,
+    onState: (state) => {
+      void handleGuardStateUpdate(entry.siteId, state, true);
+    },
+  });
+
+  if (watcher) {
+    guardWatchers.set(entry.siteId, watcher);
+  }
+}
+
+async function stopGuardWatcher(siteId: string): Promise<void> {
+  const watcher = guardWatchers.get(siteId);
+  if (watcher) {
+    watcher.stop();
+    guardWatchers.delete(siteId);
+  }
+}
+
+async function startGuardForSite(site: BlockedSite): Promise<void> {
+  const guard = getUnlockGuard(site.unlockMethod);
+  if (!guard) return;
+
+  const entry: GuardEntry = {
+    siteId: site.id,
+    method: site.unlockMethod,
+    settings: site.challengeSettings,
+  };
+
+  await saveGuardEntry(entry);
+  await scheduleGuardWatchdog(site.id);
+
+  if (isMV3 && offscreenApi) {
+    await ensureOffscreenDocument();
+    try {
+      await browser.runtime.sendMessage({
+        type: "GUARD_START",
+        siteId: entry.siteId,
+        method: entry.method,
+        settings: entry.settings,
+        heartbeatMs: GUARD_HEARTBEAT_MS,
+        pollIntervalMs: guard.pollIntervalMs,
+      });
+    } catch (error) {
+      console.warn("[distracted] Failed to start guard in offscreen:", error);
+    }
+  } else {
+    await startGuardWatcherForEntry(entry);
+  }
+}
+
+async function stopGuardForSite(siteId: string): Promise<void> {
+  await removeGuardEntry(siteId);
+
+  if (isMV3 && offscreenApi) {
+    try {
+      await browser.runtime.sendMessage({
+        type: "GUARD_STOP",
+        siteId,
+      });
+    } catch (error) {
+      console.warn("[distracted] Failed to stop guard in offscreen:", error);
+    }
+    await maybeCloseOffscreenDocument();
+  } else {
+    await stopGuardWatcher(siteId);
+  }
+}
+
+async function restoreGuardSessions(): Promise<void> {
+  const session = await browser.storage.session.get();
+  const entries = Object.entries(session)
+    .filter(([key]) => key.startsWith(GUARD_PREFIX))
+    .map(([, value]) => value as GuardEntry);
+
+  if (entries.length === 0) return;
+
+  const activeEntries: GuardEntry[] = [];
+  for (const entry of entries) {
+    const unlocked = await isSiteUnlocked(entry.siteId);
+    if (unlocked) {
+      activeEntries.push(entry);
+    } else {
+      await removeGuardEntry(entry.siteId);
+    }
+  }
+
+  if (activeEntries.length === 0) return;
+
+  if (isMV3 && offscreenApi) {
+    await ensureOffscreenDocument();
+    for (const entry of activeEntries) {
+      await scheduleGuardWatchdog(entry.siteId);
+      try {
+        await browser.runtime.sendMessage({
+          type: "GUARD_START",
+          siteId: entry.siteId,
+          method: entry.method,
+          settings: entry.settings,
+          heartbeatMs: GUARD_HEARTBEAT_MS,
+        });
+      } catch (error) {
+        console.warn("[distracted] Failed to restore guard in offscreen:", error);
+      }
+    }
+  } else {
+    for (const entry of activeEntries) {
+      await scheduleGuardWatchdog(entry.siteId);
+      await startGuardWatcherForEntry(entry);
+    }
+  }
+}
+
+async function handleGuardStateUpdate(
+  siteId: string,
+  state: UnlockGuardState,
+  fromBackgroundWatcher = false,
+): Promise<void> {
+  if (state.active) {
+    await scheduleGuardWatchdog(siteId);
+    return;
+  }
+
+  if (fromBackgroundWatcher) {
+    await stopGuardWatcher(siteId);
+  }
+
+  const unlocked = await isSiteUnlocked(siteId);
+  if (!unlocked) {
+    await stopGuardForSite(siteId);
+    return;
+  }
+
+  const tabsToRedirect = isMV3
+    ? await dnr.revokeAccess(siteId)
+    : await webRequest.revokeAccess(siteId);
+
+  await stopGuardForSite(siteId);
+
+  for (const tabId of tabsToRedirect) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      if (!tab.url) continue;
+
+      const blockedPageUrl = browser.runtime.getURL(
+        `/blocked.html?url=${encodeURIComponent(tab.url)}&siteId=${encodeURIComponent(siteId)}`,
+      );
+      await browser.tabs.update(tabId, { url: blockedPageUrl });
+      console.log(`[distracted] Redirected tab ${tabId} after guard relock`);
+    } catch (err) {
+      console.log(`[distracted] Could not redirect tab ${tabId}:`, err);
+    }
+  }
+}
 
 async function syncRules(): Promise<void> {
   if (isMV3) await dnr.syncDnrRules();
@@ -30,7 +258,7 @@ async function isSiteUnlocked(siteId: string): Promise<boolean> {
 
 async function getUnlockState(
   siteId: string,
-): Promise<{ siteId: string; expiresAt: number } | null> {
+): Promise<{ siteId: string; expiresAt: number | null } | null> {
   if (isMV3) return dnr.getUnlockState(siteId);
   else return webRequest.getUnlockState(siteId);
 }
@@ -338,6 +566,7 @@ export default defineBackground(() => {
   (async () => {
     if (isMV3) await dnr.initializeDnr();
     else await webRequest.initializeWebRequest();
+    await restoreGuardSessions();
   })().catch((err) => {
     console.error("[distracted] Failed to initialize blocker:", err);
   });
@@ -386,6 +615,12 @@ export default defineBackground(() => {
   }
 
   browser.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name.startsWith(GUARD_ALARM_PREFIX)) {
+      const siteId = alarm.name.slice(GUARD_ALARM_PREFIX.length);
+      await handleGuardStateUpdate(siteId, { active: false, reason: "offline" });
+      return;
+    }
+
     const result = isMV3
       ? await dnr.handleRelockAlarm(alarm.name)
       : await webRequest.handleRelockAlarm(alarm.name);
@@ -518,11 +753,43 @@ export default defineBackground(() => {
           case "UNLOCK_SITE": {
             const { siteId, durationMinutes } = message;
 
-            const { expiresAt } = isMV3
-              ? await dnr.grantAccess(siteId, durationMinutes)
-              : await webRequest.grantAccess(siteId, durationMinutes);
+            const sites = await getBlockedSites();
+            const site = sites.find((entry) => entry.id === siteId);
 
-            sendResponse({ success: true, expiresAt });
+            if (!site) {
+              sendResponse({ success: false, error: "Blocked site not found" });
+              break;
+            }
+
+            if (isContinuousUnlockMethod(site.unlockMethod)) {
+              const guard = getUnlockGuard(site.unlockMethod);
+              if (!guard) {
+                sendResponse({ success: false, error: "Unlock guard not available" });
+                break;
+              }
+
+              const guardState = await guard.check(site.challengeSettings);
+              if (!guardState.active) {
+                sendResponse({
+                  success: false,
+                  error: guardState.message ?? "Unlock condition not met",
+                });
+                break;
+              }
+
+              const { expiresAt } = isMV3
+                ? await dnr.grantAccess(siteId, durationMinutes, "continuous")
+                : await webRequest.grantAccess(siteId, durationMinutes, "continuous");
+
+              await startGuardForSite(site);
+              sendResponse({ success: true, expiresAt });
+            } else {
+              const { expiresAt } = isMV3
+                ? await dnr.grantAccess(siteId, durationMinutes, "timed")
+                : await webRequest.grantAccess(siteId, durationMinutes, "timed");
+
+              sendResponse({ success: true, expiresAt });
+            }
             break;
           }
 
@@ -574,6 +841,13 @@ export default defineBackground(() => {
 
           case "SYNC_RULES": {
             await syncRules();
+            sendResponse({ success: true });
+            break;
+          }
+
+          case "GUARD_STATE_UPDATE": {
+            const { siteId, state } = message;
+            await handleGuardStateUpdate(siteId, state as UnlockGuardState);
             sendResponse({ success: true });
             break;
           }
