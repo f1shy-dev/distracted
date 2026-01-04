@@ -2,8 +2,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+
 import { UI } from "@/lib/ui";
-import { DEFAULT_PORT } from "./types";
+import { DEFAULT_PORT } from "../types";
 
 const ClaudeSettingsSchema = z
   .object({
@@ -12,8 +13,6 @@ const ClaudeSettingsSchema = z
   .catchall(z.unknown());
 
 function makeHooksConfig(port: number): Record<string, unknown[]> {
-  // Claude Code provides JSON on stdin. We forward it to the local server.
-  // Run in background + silence output to avoid blocking Claude.
   const HOOK_COMMAND = `curl -s -X POST http://localhost:${port}/hook -H 'Content-Type: application/json' -d "$(cat)" > /dev/null 2>&1 &`;
   return {
     UserPromptSubmit: [
@@ -59,14 +58,13 @@ async function readClaudeSettings(
   }
 }
 
-export async function setupHooks(port: number = DEFAULT_PORT): Promise<void> {
+export async function setupClaude(port: number = DEFAULT_PORT): Promise<void> {
   const claudeDir = join(homedir(), ".claude");
   const settingsPath = join(claudeDir, "settings.json");
 
   await mkdir(claudeDir, { recursive: true });
 
   const settings = (await readClaudeSettings(settingsPath)) ?? {};
-
   const hooksConfig = makeHooksConfig(port);
 
   settings.hooks = {
@@ -76,26 +74,25 @@ export async function setupHooks(port: number = DEFAULT_PORT): Promise<void> {
 
   await writeFile(settingsPath, JSON.stringify(settings, null, 2));
 
-  UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Hooks configured." + UI.Style.TEXT_NORMAL);
+  UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Claude Code hooks configured." + UI.Style.TEXT_NORMAL);
   UI.println(UI.Style.TEXT_DIM + `Path: ${settingsPath}` + UI.Style.TEXT_NORMAL);
   UI.println(UI.Style.TEXT_DIM + `Port: ${port}` + UI.Style.TEXT_NORMAL);
   UI.println(UI.Style.TEXT_DIM + "Next: Run 'bunx @distracted/server'" + UI.Style.TEXT_NORMAL);
   UI.empty();
 }
 
-export async function areHooksConfigured(): Promise<boolean> {
+export async function isClaudeConfigured(): Promise<boolean> {
   const settingsPath = join(homedir(), ".claude", "settings.json");
   const settings = await readClaudeSettings(settingsPath);
   if (!settings) return false;
   if (!settings.hooks) return false;
-  const hooks = settings.hooks;
 
-  // Check if at least one of our hooks is configured.
+  const hooks = settings.hooks;
   const keys = Object.keys(makeHooksConfig(DEFAULT_PORT));
   return keys.some((hookName) => hookName in hooks);
 }
 
-export async function removeHooks(): Promise<void> {
+export async function removeClaude(): Promise<void> {
   const settingsPath = join(homedir(), ".claude", "settings.json");
   const settings = await readClaudeSettings(settingsPath);
   if (!settings) {
@@ -118,7 +115,7 @@ export async function removeHooks(): Promise<void> {
   }
 
   await writeFile(settingsPath, JSON.stringify(settings, null, 2));
-  UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Hooks removed." + UI.Style.TEXT_NORMAL);
+  UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Claude Code hooks removed." + UI.Style.TEXT_NORMAL);
   UI.println(UI.Style.TEXT_DIM + `Path: ${settingsPath}` + UI.Style.TEXT_NORMAL);
   UI.empty();
 }

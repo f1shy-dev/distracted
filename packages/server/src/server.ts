@@ -64,6 +64,7 @@ app.post("/hook", async (c) => {
       tool_input?: unknown;
       cwd?: unknown;
       transcript_path?: unknown;
+      source?: unknown;
     };
 
     if (!data || typeof data.session_id !== "string" || typeof data.hook_event_name !== "string") {
@@ -91,6 +92,10 @@ app.post("/hook", async (c) => {
           : undefined,
       cwd: typeof data.cwd === "string" ? data.cwd : undefined,
       transcript_path: typeof data.transcript_path === "string" ? data.transcript_path : undefined,
+      source:
+        data.source === "claude" || data.source === "opencode"
+          ? (data.source as HookPayload["source"])
+          : undefined,
     };
 
     state.handleHook(payload);
@@ -111,14 +116,14 @@ export function startServer(port: number = DEFAULT_PORT): void {
       port,
     },
     (info) => {
-      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Distracted Server (Claude)" + UI.Style.TEXT_NORMAL);
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Distracted Server" + UI.Style.TEXT_NORMAL);
       UI.println(
         UI.Style.TEXT_INFO + `HTTP:      http://localhost:${info.port}` + UI.Style.TEXT_NORMAL,
       );
       UI.println(
         UI.Style.TEXT_INFO + `WebSocket: ws://localhost:${info.port}/ws` + UI.Style.TEXT_NORMAL,
       );
-      UI.println(UI.Style.TEXT_DIM + "Waiting for Claude Code hooks..." + UI.Style.TEXT_NORMAL);
+      UI.println(UI.Style.TEXT_DIM + "Waiting for AI agent hooks..." + UI.Style.TEXT_NORMAL);
       UI.empty();
     },
   );

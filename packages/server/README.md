@@ -6,7 +6,7 @@
 
 ## what is this package?
 
-local server that integrates with claude code hooks to enable real-time distraction blocking. receives hook events from claude code and forwards them to the extension via websocket.
+local server that integrates with AI coding agent hooks (Claude Code + OpenCode) to enable real-time distraction blocking. receives hook events from your agent(s) and forwards them to the extension via websocket.
 
 ## how to use
 
@@ -18,24 +18,39 @@ install the extension first! then run the server:
 bunx @distracted/server
 ```
 
-when ran for the first time, the CLI will add hooks to `~/.claude/settings.json` to forward events to the local server.
+if no agent hooks are configured yet, the CLI will prompt you to set them up.
 
-then the server will start on port 8765 by default (or use `--port <port>` to specify a different port).
+you can also configure/remove hooks explicitly:
+
+```bash
+bunx @distracted/server --setup
+bunx @distracted/server --setup claude
+bunx @distracted/server --setup opencode
+bunx @distracted/server --setup all
+
+bunx @distracted/server --remove
+bunx @distracted/server --remove claude
+bunx @distracted/server --remove opencode
+bunx @distracted/server --remove all
+
+bunx @distracted/server --status
+```
+
+by default the server runs on port 8765 (or use `--port <port>` to specify a different port).
+
+configuration locations:
+
+- Claude Code: `~/.claude/settings.json` (hooks that `curl` to the local server)
+- OpenCode: `~/.config/opencode/plugin/distracted.ts` (self-contained plugin file)
 
 in the extension, setup a distraction with Claude Blocker as the unlock method.
 
-to remove the claude code hooks:
-
-```bash
-bunx @distracted/server --remove
-```
-
 ## how it works
 
-- claude code sends hook events (UserPromptSubmit, PreToolUse, SessionStart/End, etc.) to the local server via http post
-- the server processes these events and maintains state about claude code activity
+- Claude Code hooks and/or OpenCode plugin send hook events (UserPromptSubmit, PreToolUse, SessionStart/End, etc.) to the local server via HTTP POST
+- the server processes these events and maintains state about agent activity across multiple sessions
 - the extension connects via websocket and receives real-time updates
-- when claude code is inactive, the extension can activate distraction blocking
+- if either agent is active/working, the user is unblocked
 
 ## credits
 
