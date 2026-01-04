@@ -11,7 +11,7 @@ interface UnlockState {
 let cachedSites: BlockedSite[] = [];
 const unlockedSites = new Map<string, UnlockState>();
 
-export async function refreshCache(): Promise<void> {
+async function refreshCache(): Promise<void> {
   cachedSites = await getBlockedSites();
 }
 
@@ -98,7 +98,7 @@ export async function revokeAccess(siteId: string): Promise<number[]> {
   return tabsToRedirect;
 }
 
-export async function findTabsOnBlockedSite(siteId: string): Promise<number[]> {
+async function findTabsOnBlockedSite(siteId: string): Promise<number[]> {
   const site = cachedSites.find((s) => s.id === siteId);
   if (!site) return [];
 

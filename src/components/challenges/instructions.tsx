@@ -1,5 +1,5 @@
 import { IconInfoCircle, IconChevronRight } from "@tabler/icons-react";
-import { ChallengeInstructions } from "@/lib/challenges/types";
+import type { ChallengeInstructions } from "@/lib/challenges/options";
 
 type ChallengeInstructionsPanelProps = {
   instructions: ChallengeInstructions;

@@ -1,10 +1,11 @@
 import { useState, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { IconClock, IconCheck } from "@tabler/icons-react";
-import type { ChallengeComponentProps } from "@/lib/challenges/types";
-import { defineChallenge } from "@/lib/challenges/types";
+import type { ChallengeComponentProps } from "@/lib/challenges/ui";
+import { defineChallengeUi } from "@/lib/challenges/ui";
+import { timerDefinition } from "@/lib/challenges/definitions/timer";
 
-export const TimerChallenge = memo(
+const TimerChallenge = memo(
   ({ settings, onComplete }: ChallengeComponentProps<{ duration: number }>) => {
     const { duration } = settings;
     const [remaining, setRemaining] = useState(duration);
@@ -82,18 +83,8 @@ export const TimerChallenge = memo(
 
 TimerChallenge.displayName = "TimerChallenge";
 
-export const timerChallenge = defineChallenge({
-  label: "Wait Timer",
+export const timerChallenge = defineChallengeUi({
+  ...timerDefinition,
   icon: <IconClock className="size-5" />,
-  description: "Wait for a countdown to finish",
-  title: "Wait to Access",
-  options: {
-    duration: {
-      type: "number",
-      label: "Timer duration (seconds)",
-      default: 10,
-      min: 1,
-    },
-  },
   render: (props) => <TimerChallenge {...props} />,
 });

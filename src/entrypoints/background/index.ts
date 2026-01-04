@@ -6,8 +6,8 @@ import {
   type BlockedSite,
   type SiteStats,
   type StatsScope,
-  type UnlockMethod,
 } from "@/lib/storage";
+import type { UnlockMethod } from "@/lib/challenges/manifest";
 import { GUARD_ALARM_PREFIX, GUARD_PREFIX, STORAGE_KEYS, TIME_TRACK_ALARM } from "@/lib/consts";
 import {
   getUnlockGuard,

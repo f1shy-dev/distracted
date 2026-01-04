@@ -9,7 +9,7 @@ import {
   IconArrowLeft,
   IconLockOpen,
 } from "@tabler/icons-react";
-import { CHALLENGES } from "@/lib/challenges";
+import { CHALLENGE_UI } from "@/components/challenges/registry";
 import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
 import { getUnlockGuard, isContinuousUnlockMethod } from "@/lib/unlock-guards";
 import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";
@@ -210,7 +210,7 @@ export default function BlockedPage() {
     return null;
   }
 
-  const challenge = CHALLENGES[blockedSite.unlockMethod];
+  const challenge = CHALLENGE_UI[blockedSite.unlockMethod];
   const challengeSettings = blockedSite.challengeSettings as typeof challenge extends {
     render: (props: infer P extends { settings: any }) => any;
   }

@@ -18,5 +18,8 @@
     "shadcn",
     "tw-animate-css",
     "@fontsource-variable/inter"
-  ]
+  ],
+  "ignoreIssues": {
+    "src/components/ui/*.tsx": ["exports"]
+  }
 }

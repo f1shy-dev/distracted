@@ -15,7 +15,7 @@ export type ClaudeBlockerStateMessage = {
   waitingForInput?: number;
 };
 
-export function resolveClaudeBlockerStatusUrl(serverUrl: string): string | null {
+function resolveClaudeBlockerStatusUrl(serverUrl: string): string | null {
   const trimmed = serverUrl.trim();
   if (!trimmed) return null;
   try {

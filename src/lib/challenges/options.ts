@@ -1,12 +1,5 @@
-import type React from "react";
-
 export type ChallengeOptionValue = string | number | boolean | Array<string | number>;
 export type ChallengeOptionValues = Record<string, ChallengeOptionValue>;
-
-export interface ChallengeComponentProps<Settings extends ChallengeOptionValues> {
-  settings: Settings;
-  onComplete: () => void;
-}
 
 export type ChallengeInstructions = {
   title?: string;
@@ -26,6 +19,7 @@ type OptionBase<Value, Kind extends string> = {
   label: string;
   default: Value;
   description?: string;
+  when?: (settings: Record<string, unknown>) => boolean;
 };
 
 export type TextOption = OptionBase<string, "text"> & {
@@ -78,18 +72,13 @@ export type InferOptionValues<Options extends OptionDefinitions> = {
   [K in keyof Options]: OptionValueFromDef<Options[K]>;
 };
 
-export type Challenge<Options extends OptionDefinitions = OptionDefinitions> = {
+export type ChallengeDefinition<Options extends OptionDefinitions = OptionDefinitions> = {
   label: string;
-  icon: React.ReactNode;
   description: string;
   title: string;
   instructions?: ChallengeInstructions;
   options: Options;
-  render: (props: ChallengeComponentProps<InferOptionValues<Options>>) => React.ReactNode;
 };
-
-export const defineChallenge = <Options extends OptionDefinitions>(challenge: Challenge<Options>) =>
-  challenge;
 
 type ChoiceOptionKind = "select" | "radio";
 type MultiChoiceOptionKind = "checkbox-group";
@@ -108,7 +97,7 @@ type MultiChoiceOptionDef<
   options: Options;
 };
 
-export const choiceOption = <
+const choiceOption = <
   Options extends readonly OptionChoice<string | number>[],
   Kind extends ChoiceOptionKind,
 >(def: {
@@ -133,7 +122,7 @@ export const radioOption = <Options extends readonly OptionChoice<string | numbe
   options: Options;
 }) => choiceOption({ type: "radio", ...def });
 
-export const multiChoiceOption = <
+const multiChoiceOption = <
   Options extends readonly OptionChoice<string | number>[],
   Kind extends MultiChoiceOptionKind,
 >(def: {

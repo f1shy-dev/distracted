@@ -169,7 +169,7 @@ export async function revokeAccess(siteId: string): Promise<number[]> {
 /**
  * Find all tabs that are currently on a blocked site
  */
-export async function findTabsOnBlockedSite(siteId: string): Promise<number[]> {
+async function findTabsOnBlockedSite(siteId: string): Promise<number[]> {
   const sites = await getBlockedSites();
   const site = sites.find((s) => s.id === siteId);
   if (!site) return [];

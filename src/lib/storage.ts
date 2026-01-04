@@ -11,10 +11,9 @@ import type {
 import type { StorageArea, StorageKey, StorageShape, StoredValue } from "./storage/shared";
 
 export type { PatternRule, BlockedSite, Schedule, SiteStats, Settings, StatsScope };
-export type { UnlockMethod, ChallengeSettingsMap } from "@/lib/challenges";
 export { normalizeStats } from "./storage/migrations";
 
-export const defaultSettings: Settings = {
+const defaultSettings: Settings = {
   statsEnabled: true,
 };
 
@@ -80,7 +79,7 @@ async function setWithFallback<K extends StorageKey>(
   }
 }
 
-export function isSyncAvailable(): boolean {
+function isSyncAvailable(): boolean {
   return typeof browser !== "undefined" && !!browser.storage?.sync;
 }
 
@@ -118,20 +117,6 @@ export async function saveBlockedSites(sites: BlockedSite[]): Promise<void> {
   await setWithFallback(STORAGE_KEYS.BLOCKED_SITES, sites);
 }
 
-export async function addBlockedSite(
-  site: Omit<BlockedSite, "id" | "createdAt">,
-): Promise<BlockedSite> {
-  const sites = await getBlockedSites();
-  const newSite: BlockedSite = {
-    ...site,
-    id: Math.random().toString(36).substring(2, 10),
-    createdAt: Date.now(),
-  };
-  sites.push(newSite);
-  await saveBlockedSites(sites);
-  return newSite;
-}
-
 export async function updateBlockedSite(id: string, updates: Partial<BlockedSite>): Promise<void> {
   const sites = await getBlockedSites();
   const index = sites.findIndex((s) => s.id === id);
@@ -161,7 +146,7 @@ export async function saveSettings(settings: Settings): Promise<void> {
   await setWithFallback(STORAGE_KEYS.SETTINGS, settings);
 }
 
-export function urlMatchesPattern(url: string, pattern: string): boolean {
+function urlMatchesPattern(url: string, pattern: string): boolean {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
@@ -236,7 +221,7 @@ export function urlMatchesPattern(url: string, pattern: string): boolean {
   }
 }
 
-export function isInSchedule(schedule: Schedule): boolean {
+function isInSchedule(schedule: Schedule): boolean {
   if (!schedule.enabled) return true;
 
   const now = new Date();

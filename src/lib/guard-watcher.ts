@@ -1,5 +1,5 @@
 import { getUnlockGuard, type UnlockGuardState } from "@/lib/unlock-guards";
-import type { UnlockMethod } from "@/lib/storage";
+import type { UnlockMethod } from "@/lib/challenges/manifest";
 
 type GuardWatcherOptions = {
   method: UnlockMethod;

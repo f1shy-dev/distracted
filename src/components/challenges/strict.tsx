@@ -1,9 +1,10 @@
 import { memo } from "react";
 import { IconLock } from "@tabler/icons-react";
-import type { ChallengeComponentProps } from "@/lib/challenges/types";
-import { defineChallenge } from "@/lib/challenges/types";
+import type { ChallengeComponentProps } from "@/lib/challenges/ui";
+import { defineChallengeUi } from "@/lib/challenges/ui";
+import { strictDefinition } from "@/lib/challenges/definitions/strict";
 
-export const StrictChallenge = memo((_props: ChallengeComponentProps<{}>) => {
+const StrictChallenge = memo((_props: ChallengeComponentProps<{}>) => {
   return (
     <div className="space-y-3 text-center">
       <div className="flex items-center justify-center text-destructive">
@@ -19,11 +20,8 @@ export const StrictChallenge = memo((_props: ChallengeComponentProps<{}>) => {
 
 StrictChallenge.displayName = "StrictChallenge";
 
-export const strictChallenge = defineChallenge({
-  label: "Strict Mode",
+export const strictChallenge = defineChallengeUi({
+  ...strictDefinition,
   icon: <IconLock className="size-5" />,
-  description: "No unlock method available",
-  title: "Strict Mode",
-  options: {},
   render: (props) => <StrictChallenge {...props} />,
 });

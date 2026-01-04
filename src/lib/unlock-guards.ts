@@ -1,4 +1,4 @@
-import type { UnlockMethod } from "@/lib/storage";
+import type { UnlockMethod } from "@/lib/challenges/manifest";
 import {
   getClaudeBlockerStatus,
   parseClaudeBlockerStateMessage,
@@ -21,7 +21,7 @@ export type UnlockGuardDefinition<Settings = unknown> = {
 
 const CLAUDE_POLL_INTERVAL_MS = 5000;
 
-export const UNLOCK_GUARDS: Partial<Record<UnlockMethod, UnlockGuardDefinition>> = {
+const UNLOCK_GUARDS: Partial<Record<UnlockMethod, UnlockGuardDefinition>> = {
   claude: {
     method: "claude",
     check: async (settings) => {

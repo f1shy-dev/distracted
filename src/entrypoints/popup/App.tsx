@@ -8,21 +8,22 @@ import {
   type BlockedSite,
   type SiteStats,
   type Settings,
-  type UnlockMethod,
   type PatternRule,
   type Schedule,
   saveBlockedSites,
 } from "@/lib/storage";
 import { DEFAULT_AUTO_RELOCK, STORAGE_KEYS } from "@/lib/consts";
 import {
-  CHALLENGES,
   getDefaultChallengeSettings,
+  isUnlockMethod,
   type ChallengeSettingsMap,
-} from "@/lib/challenges";
+  type UnlockMethod,
+} from "@/lib/challenges/manifest";
+import { CHALLENGE_UI } from "@/components/challenges/registry";
 import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
 import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";
 import { isContinuousUnlockMethod } from "@/lib/unlock-guards";
-import type { OptionDefinition } from "@/lib/challenges/types";
+import type { OptionDefinition } from "@/lib/challenges/options";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,8 +59,6 @@ import { cn } from "@/lib/utils";
 
 type View = "main" | "add" | "edit" | "stats" | "settings";
 const DEFAULT_UNLOCK_METHOD: UnlockMethod = "timer";
-const isUnlockMethod = (value: string | undefined): value is UnlockMethod =>
-  !!value && value in CHALLENGES;
 
 const PatternRuleItem = memo(function PatternRuleItem({
   rule,
@@ -119,7 +118,7 @@ const SiteItem = memo(function SiteItem({
   const resolvedMethod = isUnlockMethod(site.unlockMethod)
     ? site.unlockMethod
     : DEFAULT_UNLOCK_METHOD;
-  const challenge = CHALLENGES[resolvedMethod];
+  const challenge = CHALLENGE_UI[resolvedMethod];
   const settings = useMemo(
     () => ({
       ...getDefaultChallengeSettings(resolvedMethod),
@@ -604,8 +603,8 @@ export default function App() {
             <div className="space-y-2">
               <Label>Unlock Method</Label>
               <div className="grid gap-1.25">
-                {(Object.keys(CHALLENGES) as UnlockMethod[]).map((method) => {
-                  const challenge = CHALLENGES[method];
+                {(Object.keys(CHALLENGE_UI) as UnlockMethod[]).map((method) => {
+                  const challenge = CHALLENGE_UI[method];
                   return (
                     <button
                       key={method}
@@ -640,295 +639,304 @@ export default function App() {
             </div>
 
             {(() => {
-              const challenge = CHALLENGES[formMethod];
+              const challenge = CHALLENGE_UI[formMethod];
               const optionEntries = Object.entries(challenge.options);
               if (optionEntries.length === 0) return null;
 
               const updateOption = (key: string, value: unknown) => {
-                setFormChallengeSettings((prev) => ({
-                  ...prev,
-                  [key]: value,
-                }));
+                setFormChallengeSettings((prev: ChallengeSettingsMap[UnlockMethod]) => {
+                  return {
+                    ...(prev as Record<string, unknown>),
+                    [key]: value,
+                  } as ChallengeSettingsMap[UnlockMethod];
+                });
               };
 
               return (
                 <div className="space-y-3">
                   <Label>Challenge Options</Label>
                   <div className={`grid gap-3`}>
-                    {optionEntries.map(([key, option]) => {
-                      const opt = option as OptionDefinition;
-                      const currentValue =
-                        formChallengeSettings[key as keyof typeof formChallengeSettings] ??
-                        opt.default;
+                    {optionEntries
+                      .filter(([_key, option]) => {
+                        const opt = option as OptionDefinition;
+                        return !opt.when || opt.when(formChallengeSettings);
+                      })
+                      .map(([key, option]) => {
+                        const opt = option as OptionDefinition;
+                        const currentValue =
+                          formChallengeSettings[key as keyof typeof formChallengeSettings] ??
+                          opt.default;
 
-                      const description = opt.description ? (
-                        <p className="text-xs text-muted-foreground">{opt.description}</p>
-                      ) : null;
+                        const description = opt.description ? (
+                          <p className="text-xs text-muted-foreground">{opt.description}</p>
+                        ) : null;
 
-                      if (opt.type === "checkbox") {
-                        return (
-                          <div key={key} className="space-y-1.5">
-                            <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2">
-                              <div className="flex flex-col">
-                                <Label htmlFor={`option-${key}`} className="text-sm font-normal">
-                                  {opt.label}
-                                </Label>
-                                {description}
+                        if (opt.type === "checkbox") {
+                          return (
+                            <div key={key} className="space-y-1.5">
+                              <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2">
+                                <div className="flex flex-col">
+                                  <Label htmlFor={`option-${key}`} className="text-sm font-normal">
+                                    {opt.label}
+                                  </Label>
+                                  {description}
+                                </div>
+                                <Checkbox
+                                  id={`option-${key}`}
+                                  checked={Boolean(currentValue)}
+                                  onCheckedChange={(checked) => updateOption(key, !!checked)}
+                                />
                               </div>
-                              <Checkbox
-                                id={`option-${key}`}
-                                checked={Boolean(currentValue)}
-                                onCheckedChange={(checked) => updateOption(key, !!checked)}
-                              />
                             </div>
-                          </div>
-                        );
-                      }
+                          );
+                        }
 
-                      if (opt.type === "select") {
-                        return (
-                          <div key={key} className="space-y-1">
-                            <Label
-                              htmlFor={`option-${key}`}
-                              className="text-xs font-normal text-muted-foreground"
-                            >
-                              {opt.label}
-                            </Label>
-                            <Select
-                              value={String(currentValue)}
-                              onValueChange={(value) => {
-                                const selected = opt.options.find(
-                                  (choice) => String(choice.value) === value,
-                                );
-                                if (selected) {
-                                  updateOption(key, selected.value);
-                                }
-                              }}
-                            >
-                              <SelectTrigger id={`option-${key}`} className="w-full">
-                                <SelectValue>{opt.label}</SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  {opt.options.map((choice) => (
-                                    <SelectItem
-                                      key={String(choice.value)}
-                                      value={String(choice.value)}
-                                    >
-                                      {choice.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
-                            {description}
-                          </div>
-                        );
-                      }
-
-                      // if (opt.type === "radio") {
-                      //   return (
-                      //     <div key={key} className="space-y-2">
-                      //       <Label className="text-xs font-normal text-muted-foreground">
-                      //         {opt.label}
-                      //       </Label>
-                      //       <div
-                      //         className={cn(
-                      //           "grid gap-1",
-                      //           opt.options.every((choice) => choice.label.length < 10)
-                      //             ? "grid-cols-2"
-                      //             : "grid-cols-1",
-                      //         )}
-                      //       >
-                      //         {opt.options.map((choice) => {
-                      //           const id = `option-${key}-${String(choice.value)}`;
-                      //           return (
-                      //             <label
-                      //               key={id}
-                      //               htmlFor={id}
-                      //               className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
-                      //             >
-                      //               <input
-                      //                 id={id}
-                      //                 type="checkbox"
-                      //                 name={`option-${key}`}
-                      //                 className="size-4 accent-primary"
-                      //                 checked={String(currentValue) === String(choice.value)}
-                      //                 onChange={() => updateOption(key, choice.value)}
-                      //               />
-                      //               <span>{choice.label}</span>
-                      //             </label>
-                      //           );
-                      //         })}
-                      //       </div>
-                      //       {description}
-                      //     </div>
-                      //   );
-                      // }
-
-                      if (opt.type === "checkbox-group" || opt.type === "radio") {
-                        const isMulti = opt.type === "checkbox-group";
-                        const values = isMulti
-                          ? Array.isArray(currentValue)
-                            ? currentValue
-                            : (opt.default ?? [])
-                          : null;
-                        return (
-                          <div key={key} className="space-y-2">
-                            <Label className="text-xs font-normal text-muted-foreground">
-                              {opt.label}
-                            </Label>
-                            <div
-                              className={cn(
-                                "grid gap-1",
-                                opt.options.every((choice) => choice.label.length < 10)
-                                  ? "grid-cols-2"
-                                  : "grid-cols-1",
-                              )}
-                            >
-                              {opt.options.map((choice) => {
-                                const id = `option-${key}-${String(choice.value)}`;
-                                const isChecked = isMulti
-                                  ? Array.isArray(values) &&
-                                    values.some((value) => String(value) === String(choice.value))
-                                  : String(currentValue) === String(choice.value);
-                                return (
-                                  <label
-                                    key={id}
-                                    htmlFor={id}
-                                    className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
-                                  >
-                                    <Checkbox
-                                      id={id}
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        if (isMulti && Array.isArray(values)) {
-                                          const next = checked
-                                            ? [...values, choice.value]
-                                            : values.filter(
-                                                (value) => String(value) !== String(choice.value),
-                                              );
-                                          updateOption(key, next);
-                                        } else {
-                                          if (checked) {
-                                            updateOption(key, choice.value);
-                                          }
-                                        }
-                                      }}
-                                    />
-                                    <span>{choice.label}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            {description}
-                          </div>
-                        );
-                      }
-
-                      if (opt.type === "slider") {
-                        const listId = opt.marks?.length ? `option-${key}-marks` : undefined;
-                        return (
-                          <div key={key} className="space-y-1">
-                            <div className="flex items-center justify-between">
+                        if (opt.type === "select") {
+                          return (
+                            <div key={key} className="space-y-1">
                               <Label
                                 htmlFor={`option-${key}`}
                                 className="text-xs font-normal text-muted-foreground"
                               >
                                 {opt.label}
                               </Label>
-                              <span className="text-xs text-muted-foreground">{currentValue}</span>
-                            </div>
-                            <input
-                              id={`option-${key}`}
-                              type="range"
-                              className="w-full accent-primary"
-                              min={opt.min}
-                              max={opt.max}
-                              step={opt.step}
-                              list={listId}
-                              value={Number(currentValue)}
-                              onChange={(e) => {
-                                const value = Number.parseFloat(e.target.value);
-                                updateOption(key, Number.isNaN(value) ? opt.min : value);
-                              }}
-                            />
-                            {opt.marks?.length ? (
-                              <datalist id={listId}>
-                                {opt.marks.map((mark) => (
-                                  <option key={mark} value={mark} />
-                                ))}
-                              </datalist>
-                            ) : null}
-                            {description}
-                          </div>
-                        );
-                      }
-
-                      if (opt.type === "number") {
-                        return (
-                          <div key={key} className="space-y-1">
-                            <Label
-                              htmlFor={`option-${key}`}
-                              className="text-xs font-normal text-muted-foreground"
-                            >
-                              {opt.label}
-                            </Label>
-                            <Input
-                              id={`option-${key}`}
-                              type="number"
-                              min={opt.min}
-                              max={opt.max}
-                              step={opt.step}
-                              value={String(currentValue)}
-                              onChange={(e) => {
-                                const value = Number.parseFloat(e.target.value);
-                                updateOption(key, Number.isNaN(value) ? (opt.min ?? 0) : value);
-                              }}
-                            />
-                            {description}
-                          </div>
-                        );
-                      }
-
-                      if (opt.type === "text") {
-                        return (
-                          <div key={key} className="space-y-1">
-                            <Label
-                              htmlFor={`option-${key}`}
-                              className="text-xs font-normal text-muted-foreground"
-                            >
-                              {opt.label}
-                            </Label>
-                            {opt.multiline ? (
-                              <Textarea
-                                id={`option-${key}`}
-                                rows={3}
+                              <Select
                                 value={String(currentValue)}
-                                onChange={(e) => updateOption(key, e.target.value)}
+                                onValueChange={(value) => {
+                                  const selected = opt.options.find(
+                                    (choice) => String(choice.value) === value,
+                                  );
+                                  if (selected) {
+                                    updateOption(key, selected.value);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger id={`option-${key}`} className="w-full">
+                                  <SelectValue>{opt.label}</SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    {opt.options.map((choice) => (
+                                      <SelectItem
+                                        key={String(choice.value)}
+                                        value={String(choice.value)}
+                                      >
+                                        {choice.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                              {description}
+                            </div>
+                          );
+                        }
+
+                        // if (opt.type === "radio") {
+                        //   return (
+                        //     <div key={key} className="space-y-2">
+                        //       <Label className="text-xs font-normal text-muted-foreground">
+                        //         {opt.label}
+                        //       </Label>
+                        //       <div
+                        //         className={cn(
+                        //           "grid gap-1",
+                        //           opt.options.every((choice) => choice.label.length < 10)
+                        //             ? "grid-cols-2"
+                        //             : "grid-cols-1",
+                        //         )}
+                        //       >
+                        //         {opt.options.map((choice) => {
+                        //           const id = `option-${key}-${String(choice.value)}`;
+                        //           return (
+                        //             <label
+                        //               key={id}
+                        //               htmlFor={id}
+                        //               className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
+                        //             >
+                        //               <input
+                        //                 id={id}
+                        //                 type="checkbox"
+                        //                 name={`option-${key}`}
+                        //                 className="size-4 accent-primary"
+                        //                 checked={String(currentValue) === String(choice.value)}
+                        //                 onChange={() => updateOption(key, choice.value)}
+                        //               />
+                        //               <span>{choice.label}</span>
+                        //             </label>
+                        //           );
+                        //         })}
+                        //       </div>
+                        //       {description}
+                        //     </div>
+                        //   );
+                        // }
+
+                        if (opt.type === "checkbox-group" || opt.type === "radio") {
+                          const isMulti = opt.type === "checkbox-group";
+                          const values = isMulti
+                            ? Array.isArray(currentValue)
+                              ? currentValue
+                              : (opt.default ?? [])
+                            : null;
+                          return (
+                            <div key={key} className="space-y-2">
+                              <Label className="text-xs font-normal text-muted-foreground">
+                                {opt.label}
+                              </Label>
+                              <div
+                                className={cn(
+                                  "grid gap-1",
+                                  opt.options.every((choice) => choice.label.length < 10)
+                                    ? "grid-cols-2"
+                                    : "grid-cols-1",
+                                )}
+                              >
+                                {opt.options.map((choice) => {
+                                  const id = `option-${key}-${String(choice.value)}`;
+                                  const isChecked = isMulti
+                                    ? Array.isArray(values) &&
+                                      values.some((value) => String(value) === String(choice.value))
+                                    : String(currentValue) === String(choice.value);
+                                  return (
+                                    <label
+                                      key={id}
+                                      htmlFor={id}
+                                      className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
+                                    >
+                                      <Checkbox
+                                        id={id}
+                                        checked={isChecked}
+                                        onCheckedChange={(checked) => {
+                                          if (isMulti && Array.isArray(values)) {
+                                            const next = checked
+                                              ? [...values, choice.value]
+                                              : values.filter(
+                                                  (value) => String(value) !== String(choice.value),
+                                                );
+                                            updateOption(key, next);
+                                          } else {
+                                            if (checked) {
+                                              updateOption(key, choice.value);
+                                            }
+                                          }
+                                        }}
+                                      />
+                                      <span>{choice.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              {description}
+                            </div>
+                          );
+                        }
+
+                        if (opt.type === "slider") {
+                          const listId = opt.marks?.length ? `option-${key}-marks` : undefined;
+                          return (
+                            <div key={key} className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <Label
+                                  htmlFor={`option-${key}`}
+                                  className="text-xs font-normal text-muted-foreground"
+                                >
+                                  {opt.label}
+                                </Label>
+                                <span className="text-xs text-muted-foreground">
+                                  {currentValue}
+                                </span>
+                              </div>
+                              <input
+                                id={`option-${key}`}
+                                type="range"
+                                className="w-full accent-primary"
+                                min={opt.min}
+                                max={opt.max}
+                                step={opt.step}
+                                list={listId}
+                                value={Number(currentValue)}
+                                onChange={(e) => {
+                                  const value = Number.parseFloat(e.target.value);
+                                  updateOption(key, Number.isNaN(value) ? opt.min : value);
+                                }}
                               />
-                            ) : (
+                              {opt.marks?.length ? (
+                                <datalist id={listId}>
+                                  {opt.marks.map((mark) => (
+                                    <option key={mark} value={mark} />
+                                  ))}
+                                </datalist>
+                              ) : null}
+                              {description}
+                            </div>
+                          );
+                        }
+
+                        if (opt.type === "number") {
+                          return (
+                            <div key={key} className="space-y-1">
+                              <Label
+                                htmlFor={`option-${key}`}
+                                className="text-xs font-normal text-muted-foreground"
+                              >
+                                {opt.label}
+                              </Label>
                               <Input
                                 id={`option-${key}`}
-                                type="text"
-                                placeholder={opt.placeholder}
+                                type="number"
+                                min={opt.min}
+                                max={opt.max}
+                                step={opt.step}
                                 value={String(currentValue)}
-                                onChange={(e) => updateOption(key, e.target.value)}
+                                onChange={(e) => {
+                                  const value = Number.parseFloat(e.target.value);
+                                  updateOption(key, Number.isNaN(value) ? (opt.min ?? 0) : value);
+                                }}
                               />
-                            )}
-                            {description}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
+                              {description}
+                            </div>
+                          );
+                        }
+
+                        if (opt.type === "text") {
+                          return (
+                            <div key={key} className="space-y-1">
+                              <Label
+                                htmlFor={`option-${key}`}
+                                className="text-xs font-normal text-muted-foreground"
+                              >
+                                {opt.label}
+                              </Label>
+                              {opt.multiline ? (
+                                <Textarea
+                                  id={`option-${key}`}
+                                  rows={3}
+                                  value={String(currentValue)}
+                                  onChange={(e) => updateOption(key, e.target.value)}
+                                />
+                              ) : (
+                                <Input
+                                  id={`option-${key}`}
+                                  type="text"
+                                  placeholder={opt.placeholder}
+                                  value={String(currentValue)}
+                                  onChange={(e) => updateOption(key, e.target.value)}
+                                />
+                              )}
+                              {description}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
                   </div>
                 </div>
               );
             })()}
 
-            {CHALLENGES[formMethod].instructions && (
-              <ChallengeInstructionsPanel instructions={CHALLENGES[formMethod].instructions}>
+            {CHALLENGE_UI[formMethod].instructions && (
+              <ChallengeInstructionsPanel instructions={CHALLENGE_UI[formMethod].instructions}>
                 {formMethod === "claude" && (
                   <ClaudeBlockerDebug
                     settings={

@@ -1,5 +1,5 @@
 import { startGuardWatcher, type GuardWatcherHandle } from "@/lib/guard-watcher";
-import type { UnlockMethod } from "@/lib/storage";
+import type { UnlockMethod } from "@/lib/challenges/manifest";
 import type { UnlockGuardState } from "@/lib/unlock-guards";
 
 type GuardStartMessage = {
