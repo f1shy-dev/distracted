@@ -1,6 +1,3 @@
-export type { ChallengeComponentProps, ChallengeInstructions } from "./types";
-export { defineChallenge } from "./types";
-
 import { timerChallenge } from "../../components/challenges/timer";
 import { holdChallenge } from "../../components/challenges/hold";
 import { typeChallenge } from "../../components/challenges/type";
