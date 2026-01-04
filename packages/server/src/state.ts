@@ -196,6 +196,7 @@ class SessionState {
 
     const pollCapy = async () => {
       const status = await getCapyStatus();
+      UI.println(UI.Style.TEXT_DIM + `[capy] ${JSON.stringify(status)}` + UI.Style.TEXT_NORMAL);
 
       if (status.working > 0) {
         this.sessions.set(sessionId, {
