@@ -31,12 +31,12 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: lint
-        run: bun run lint:ci
+        run: bun run --cwd packages/extension lint:ci
 
       - name: type check
-        run: bun run compile
+        run: bun run --cwd packages/extension compile
 
       - name: build extension
         run: |
-          bun run build
-          bun run build:firefox
+          bun run --cwd packages/extension build
+          bun run --cwd packages/extension build:firefox

@@ -1,4 +1,4 @@
-![distracted! - "block distracting websites! do mini tasks to get back on them..."](public/readme-banner.png)
+![distracted! - "block distracting websites! do mini tasks to get back on them..."](packages/extension/public/readme-banner.png)
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ggimjhcfchbfdhpehdekdiblbfmijngf?label=chrome%20web%20store&style=for-the-badge)](https://chromewebstore.google.com/detail/distracted/ggimjhcfchbfdhpehdekdiblbfmijngf)
 [![Firefox Add-ons](https://img.shields.io/amo/v/distracted?label=firefox%20add-ons&style=for-the-badge)](https://addons.mozilla.org/en-GB/firefox/addon/distracted/)
@@ -85,9 +85,9 @@ yes! you could also just not install it! there is only so many layers of annoyan
 
 4. outputs (for release or inspection/review):
    - chrome:
-     - `.output/chrome-mv3/`
-     - `.output/distracted-<version>-chrome.zip`
+     - `packages/extension/.output/chrome-mv3/`
+     - `packages/extension/.output/distracted-<version>-chrome.zip`
    - firefox:
-     - `.output/firefox-mv2/`
-     - `.output/distracted-<version>-firefox.zip`
-     - `.output/distracted-<version>-sources.zip`
+     - `packages/extension/.output/firefox-mv2/`
+     - `packages/extension/.output/distracted-<version>-firefox.zip`
+     - `packages/extension/.output/distracted-<version>-sources.zip`
