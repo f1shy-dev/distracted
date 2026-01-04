@@ -1,9 +1,27 @@
 {
   "name": "distracted",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "private": true,
   "description": "blocks distracting websites! do mini tasks to get back on them...",
   "type": "module",
+  "author": "f1shy-dev",
+  "license": "MIT",
+  "homepage": "https://github.com/f1shy-dev/distracted",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/f1shy-dev/distracted.git"
+  },
+  "bugs": {
+    "url": "https://github.com/f1shy-dev/distracted/issues"
+  },
+  "keywords": [
+    "browser",
+    "extension",
+    "distracted",
+    "block",
+    "website",
+    "task"
+  ],
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
