@@ -60,7 +60,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "catalog:",
     "@wxt-dev/module-react": "^1.1.5",
-    "knip": "^5.79.0",
+    "knip": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",

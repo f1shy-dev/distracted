@@ -37,3 +37,6 @@ jobs:
         run: |
           bun run --cwd packages/extension build
           bun run --cwd packages/extension build:firefox
+
+      - name: build server
+        run: bun run --cwd packages/server build

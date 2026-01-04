@@ -1,0 +1,46 @@
+{
+  "name": "@distracted/server",
+  "version": "1.1.0",
+  "description": "Local server + Claude Code hook installer for distracted's Claude Blocker integration.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/f1shy-dev/distracted.git",
+    "directory": "packages/server"
+  },
+  "bin": "./dist/bin.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build src/bin.ts --outdir dist --target node --banner='#!/usr/bin/env node'",
+    "dev": "bun run src/bin.ts",
+    "lint": "oxlint --type-aware --type-check",
+    "lint:fix": "oxlint --type-aware --type-check --fix",
+    "lint:ci": "oxlint --type-aware --type-check --format github",
+    "format": "oxfmt",
+    "knip": "knip",
+    "check": "bun run lint:fix && bun run format && bun run knip"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.7",
+    "@hono/node-ws": "^1.2.0",
+    "cac": "^6.7.14",
+    "hono": "^4.11.3",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "bun-types": "^1.2.0",
+    "knip": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

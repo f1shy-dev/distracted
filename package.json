@@ -13,7 +13,8 @@
       "@typescript/native-preview": "^7.0.0-dev",
       "oxfmt": "^0.21.0",
       "oxlint": "^1.36.0",
-      "oxlint-tsgolint": "^0.10.1"
+      "oxlint-tsgolint": "^0.10.1",
+      "knip": "^5.79.0"
     }
   },
   "scripts": {
@@ -26,6 +27,8 @@
     "clean": "rm -rf node_modules && rm -rf packages/*/node_modules && bun run --workspaces --if-present clean"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
+    "bun-types": "^1.2.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",

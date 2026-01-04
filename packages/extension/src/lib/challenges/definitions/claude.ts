@@ -12,7 +12,7 @@ export const claudeDefinition = {
       "Keep the server running while you work in Claude Code.",
       "If you change the server port, update the Server URL below.",
     ],
-    commands: ["npx claude-blocker --setup"],
+    commands: ["bunx @distracted/server --setup"],
     note: "If the server is offline or Claude is idle, the site stays locked.",
   },
   options: {

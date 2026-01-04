@@ -1,0 +1,93 @@
+name: release server
+
+on:
+  push:
+    tags:
+      - '@distracted/server@*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., @distracted/server@1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: Deploy
+    permissions:
+      contents: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/@distracted/server@* ]]; then
+            # Extract version from tag format: @distracted/server@X.X.X
+            VERSION="${GITHUB_REF#refs/tags/@distracted/server@}"
+          else
+            echo "Unable to determine version"
+            exit 1
+          fi
+          
+          # Validate version format
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION (expected semver, e.g., 1.0.0)"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package version
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: packages/server
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Build server package
+        working-directory: packages/server
+        run: bun run build
+
+      - name: Verify build output
+        working-directory: packages/server
+        run: |
+          if [ ! -f "dist/bin.js" ]; then
+            echo "Build failed: dist/bin.js not found"
+            exit 1
+          fi
+
+      - name: Publish to NPM
+        working-directory: packages/server
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish --access public
+
+      - name: Commit version change
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/server/package.json
+          git commit -m "chore(server): bump version to ${{ steps.version.outputs.version }}" || exit 0
+          git push origin HEAD || true

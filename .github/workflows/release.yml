@@ -1,13 +1,13 @@
-name: release
+name: release extension
 
 on:
   push:
     tags:
-      - "v*"
+      - '@distracted/extension@*'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build and attach to release (e.g., v0.0.0-beta.1)"
+        description: "Tag to build and attach to release (e.g., @distracted/extension@1.0.0)"
         required: true
         type: string
 
