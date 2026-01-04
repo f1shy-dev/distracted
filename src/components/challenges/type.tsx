@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, memo, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { IconCheck, IconKeyboard } from "@tabler/icons-react";
+import { IconCheck, IconKeyboard, IconHash, IconFileText } from "@tabler/icons-react";
 import type { ChallengeComponentProps } from "@/lib/challenges/ui";
 import { defineChallengeUi } from "@/lib/challenges/ui";
 import { typeDefinition } from "@/lib/challenges/definitions/type";
@@ -94,8 +94,8 @@ const TypeChallenge = memo(
               {inputText.length}/{targetText.length}
             </p>
           </div>
-          <div className="p-3 bg-muted/30 rounded-lg overflow-hidden flex justify-center">
-            <code className="text-sm font-mono tracking-wider whitespace-nowrap">
+          <div className="p-3 bg-muted/30 rounded-lg overflow-x-auto">
+            <code className="text-sm font-mono tracking-wider whitespace-pre-wrap break-words block w-fit max-w-full mx-auto">
               {targetText.split("").map((char, i) => (
                 <span
                   key={i}
@@ -145,4 +145,38 @@ export const typeChallenge = defineChallengeUi({
   ...typeDefinition,
   icon: <IconKeyboard className="size-5" />,
   render: (props) => <TypeChallenge {...props} />,
+  renderSummary: (settings) => {
+    const mode = settings.mode ?? "uuid";
+    switch (mode) {
+      case "uuid":
+        return (
+          <>
+            <IconHash className="size-3 inline align-middle mr-1" />
+            UUID
+          </>
+        );
+      case "random": {
+        const length = settings.length ?? 21;
+        const include = settings.randomModeInclude ?? ["uppercase", "lowercase", "numbers"];
+        const parts: string[] = [];
+        if (include.includes("uppercase")) parts.push("A-Z");
+        if (include.includes("lowercase")) parts.push("a-z");
+        if (include.includes("numbers")) parts.push("0-9");
+        if (include.includes("special")) parts.push("special");
+        return `${length} chars (${parts.join(", ")})`;
+      }
+      case "custom": {
+        const text = settings.customText ?? "";
+        const preview = text.length > 20 ? `${text.slice(0, 20)}...` : text;
+        if (!preview) return null;
+        return (
+          <>
+            <IconFileText className="size-3 inline align-middle mr-1" />"{preview}"
+          </>
+        );
+      }
+      default:
+        return null;
+    }
+  },
 });

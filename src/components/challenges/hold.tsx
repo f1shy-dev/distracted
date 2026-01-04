@@ -112,4 +112,7 @@ export const holdChallenge = defineChallengeUi({
   ...holdDefinition,
   icon: <IconHandStop className="size-5" />,
   render: (props) => <HoldChallenge {...props} />,
+  renderSummary: (settings) => {
+    return `${settings.duration}s`;
+  },
 });

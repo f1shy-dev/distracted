@@ -87,4 +87,7 @@ export const timerChallenge = defineChallengeUi({
   ...timerDefinition,
   icon: <IconClock className="size-5" />,
   render: (props) => <TimerChallenge {...props} />,
+  renderSummary: (settings) => {
+    return `${settings.duration}s`;
+  },
 });

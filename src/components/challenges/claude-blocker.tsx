@@ -222,4 +222,14 @@ export const claudeBlockerChallenge = defineChallengeUi({
   ...claudeDefinition,
   icon: <IconServer className="size-5" />,
   render: (props) => <ClaudeBlockerChallenge {...props} />,
+  renderSummary: (settings) => (
+    <>
+      <IconServer className="size-3 inline align-middle mr-1" />
+      {settings.serverUrl
+        ? settings.serverUrl.length > 25
+          ? `${settings.serverUrl.slice(0, 25)}...`
+          : settings.serverUrl
+        : "Not configured"}
+    </>
+  ),
 });

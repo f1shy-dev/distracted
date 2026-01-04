@@ -24,4 +24,5 @@ export const strictChallenge = defineChallengeUi({
   ...strictDefinition,
   icon: <IconLock className="size-5" />,
   render: (props) => <StrictChallenge {...props} />,
+  renderSummary: () => null,
 });

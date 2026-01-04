@@ -15,6 +15,7 @@ export type ChallengeUi<Options extends OptionDefinitions = OptionDefinitions> =
   ChallengeDefinition<Options> & {
     icon: React.ReactNode;
     render: (props: ChallengeComponentProps<InferOptionValues<Options>>) => React.ReactNode;
+    renderSummary: (settings: InferOptionValues<Options>) => React.ReactNode;
   };
 
 export const defineChallengeUi = <Options extends OptionDefinitions>(

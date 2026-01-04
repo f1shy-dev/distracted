@@ -130,16 +130,8 @@ const SiteItem = memo(function SiteItem({
   const allowRules = site.rules.filter((r) => r.allow);
 
   const settingsSummary = useMemo(() => {
-    const parts: string[] = [];
-    for (const key of Object.keys(challenge.options)) {
-      const value = settings[key as keyof typeof settings];
-      if (value !== undefined) {
-        const displayValue = typeof value === "boolean" ? (value ? "on" : "off") : String(value);
-        parts.push(`${displayValue}${key === "duration" ? "s" : ""}`);
-      }
-    }
-    return parts.length > 0 ? parts.join(", ") : null;
-  }, [challenge.options, settings]);
+    return challenge.renderSummary(settings as never);
+  }, [challenge, settings]);
 
   return (
     <div
@@ -191,10 +183,10 @@ const SiteItem = memo(function SiteItem({
         ))}
       </div>
 
-      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-        {settingsSummary && <span>{settingsSummary} to unlock</span>}
+      <div className="flex items-center mt-2 text-xs text-muted-foreground">
+        {settingsSummary}
         {site.autoRelockAfter && (
-          <span className="flex items-center gap-1">
+          <span className="ml-3 flex items-center gap-1">
             <IconRefresh className="size-3" />
             {site.autoRelockAfter}m relock
           </span>
@@ -879,6 +871,7 @@ export default function App() {
                                   rows={3}
                                   value={String(currentValue)}
                                   onChange={(e) => updateOption(key, e.target.value)}
+                                  className="text-sm"
                                 />
                               ) : (
                                 <Input
