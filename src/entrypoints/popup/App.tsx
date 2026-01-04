@@ -608,7 +608,7 @@ export default function App() {
                       className={`flex items-center gap-2 px-1.5 py-1.25 rounded-xl text-left transition-all ${
                         formMethod === method
                           ? "bg-secondary border border-secondary"
-                          : "border border-border/40 hover:bg-muted/50"
+                          : "border border-border hover:bg-muted/50"
                       }`}
                     >
                       <div
@@ -666,7 +666,7 @@ export default function App() {
                         if (opt.type === "checkbox") {
                           return (
                             <div key={key} className="space-y-1.5">
-                              <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2">
+                              <div className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
                                 <div className="flex flex-col">
                                   <Label htmlFor={`option-${key}`} className="text-sm font-normal">
                                     {opt.label}
@@ -759,7 +759,7 @@ export default function App() {
                                     <label
                                       key={id}
                                       htmlFor={id}
-                                      className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
+                                      className="flex items-center gap-2 text-sm border border-border rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
                                     >
                                       <Checkbox
                                         id={id}

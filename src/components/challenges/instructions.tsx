@@ -16,7 +16,7 @@ export function ChallengeInstructionsPanel({
 
   return (
     <details
-      className={`group rounded-lg border border-border/40 bg-muted/20 p-3 text-xs ${className ?? ""}`}
+      className={`group rounded-lg border border-border bg-muted/20 p-3 text-xs ${className ?? ""}`}
     >
       <summary className="cursor-pointer text-sm font-medium text-foreground flex items-center gap-2 list-none [&::-webkit-details-marker]:hidden">
         <IconInfoCircle className="size-4 text-muted-foreground" />

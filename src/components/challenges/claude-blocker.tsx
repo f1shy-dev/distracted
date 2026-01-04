@@ -188,7 +188,7 @@ export const ClaudeBlockerDebug = memo(
     const debug = state ? getDebugState(state) : null;
 
     return (
-      <div className="rounded-md border border-border/40 bg-muted/30 p-2 text-[11px]">
+      <div className="rounded-md border border-border bg-muted/30 p-2 text-[11px]">
         <div className="flex items-center justify-between text-muted-foreground">
           <span className="font-medium">Debug</span>
           {debug ? (

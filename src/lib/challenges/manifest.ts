@@ -3,6 +3,7 @@ import { holdDefinition } from "@/lib/challenges/definitions/hold";
 import { typeDefinition } from "@/lib/challenges/definitions/type";
 import { claudeDefinition } from "@/lib/challenges/definitions/claude";
 import { strictDefinition } from "@/lib/challenges/definitions/strict";
+import { mathsDefinition } from "@/lib/challenges/definitions/maths";
 import type { InferOptionValues } from "@/lib/challenges/options";
 
 const CHALLENGE_DEFINITIONS = {
@@ -11,6 +12,7 @@ const CHALLENGE_DEFINITIONS = {
   type: typeDefinition,
   claude: claudeDefinition,
   strict: strictDefinition,
+  maths: mathsDefinition,
 } as const;
 
 export type UnlockMethod = keyof typeof CHALLENGE_DEFINITIONS;
