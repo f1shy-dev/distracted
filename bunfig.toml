@@ -1,4 +1,2 @@
 [install]
-# Use Bun's pnpm-like strict dependency isolation for monorepos/workspaces.
-# Docs: https://bun.com/docs/pm/isolated-installs
 linker = "isolated"
