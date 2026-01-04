@@ -9,7 +9,9 @@
 - multiple unlock challenges (more soon):
   - timer
   - hold button
-  - typing a random UUID (no copy/paste)
+  - typing something random (no copy/paste)
+  - solving a math problem
+  - active blocking when Claude Code is inactive
 - (optionally) track your visits and success rate
 - all data stays local on your device
 
