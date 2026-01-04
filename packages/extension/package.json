@@ -58,13 +58,13 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@typescript/native-preview": "catalog:",
     "@wxt-dev/module-react": "^1.1.5",
     "knip": "^5.79.0",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "oxlint-tsgolint": "catalog:",
     "typescript": "catalog:",
-    "@typescript/native-preview": "catalog:",
     "wxt": "^0.20.6"
   }
 }
