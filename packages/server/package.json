@@ -11,16 +11,14 @@
   "bin": "./dist/bin.js",
   "files": [
     "dist",
-    "public",
     "README.md"
   ],
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
-  "type": "module",
   "scripts": {
-    "prepublishOnly": "mkdir -p public && cp ../extension/public/readme-banner.png public/",
-    "build": "bun build src/bin.ts --outdir dist --target node && printf '#!/usr/bin/env node\\n' | cat - dist/bin.js > dist/bin.js.tmp && mv dist/bin.js.tmp dist/bin.js && chmod +x dist/bin.js",
+    "build": "bun build src/bin.ts --outdir dist --target node --banner='#!/usr/bin/env node'",
     "dev": "bun run src/bin.ts",
     "lint": "oxlint --type-aware --type-check",
     "lint:fix": "oxlint --type-aware --type-check --fix",

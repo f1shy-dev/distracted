@@ -11,6 +11,7 @@ local server that integrates with claude code hooks to enable real-time distract
 ## how to use
 
 ### setup
+
 install the extension first! then run the server:
 
 ```bash
@@ -37,5 +38,6 @@ bunx @distracted/server --remove
 - when claude code is inactive, the extension can activate distraction blocking
 
 ## credits
+
 - @t3dotgg/[@theo](https://x.com/theo) for the original [claude-blocker](https://github.com/t3dotgg/claude-blocker)
 - [opencode](https://github.com/anomalyco/opencode) for some small bits of CLI code ([`lib/ui.ts`](src/lib/ui.ts), [`lib/error.ts`](src/lib/error.ts))
