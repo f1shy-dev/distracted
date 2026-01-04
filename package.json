@@ -16,7 +16,8 @@
     "lint:fix": "oxlint --type-aware --fix",
     "lint:ci": "oxlint --type-aware --format github",
     "format": "oxfmt",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "knip": "knip"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "^7.0.0-dev",
     "@wxt-dev/module-react": "^1.1.5",
+    "knip": "^5.79.0",
     "oxfmt": "^0.21.0",
     "oxlint": "^1.36.0",
     "oxlint-tsgolint": "^0.10.0",
