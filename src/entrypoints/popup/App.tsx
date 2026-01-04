@@ -33,6 +33,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -664,20 +665,22 @@ export default function App() {
                         <p className="text-xs text-muted-foreground">{opt.description}</p>
                       ) : null;
 
-                      if (opt.type === "toggle" || opt.type === "checkbox") {
+                      if (opt.type === "checkbox") {
                         return (
                           <div key={key} className="space-y-1.5">
                             <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2">
-                              <Label htmlFor={`option-${key}`} className="text-sm font-normal">
-                                {opt.label}
-                              </Label>
+                              <div className="flex flex-col">
+                                <Label htmlFor={`option-${key}`} className="text-sm font-normal">
+                                  {opt.label}
+                                </Label>
+                                {description}
+                              </div>
                               <Checkbox
                                 id={`option-${key}`}
                                 checked={Boolean(currentValue)}
                                 onCheckedChange={(checked) => updateOption(key, !!checked)}
                               />
                             </div>
-                            {description}
                           </div>
                         );
                       }
@@ -706,14 +709,16 @@ export default function App() {
                                 <SelectValue>{opt.label}</SelectValue>
                               </SelectTrigger>
                               <SelectContent>
-                                {opt.options.map((choice) => (
-                                  <SelectItem
-                                    key={String(choice.value)}
-                                    value={String(choice.value)}
-                                  >
-                                    {choice.label}
-                                  </SelectItem>
-                                ))}
+                                <SelectGroup>
+                                  {opt.options.map((choice) => (
+                                    <SelectItem
+                                      key={String(choice.value)}
+                                      value={String(choice.value)}
+                                    >
+                                      {choice.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
                               </SelectContent>
                             </Select>
                             {description}
@@ -721,70 +726,94 @@ export default function App() {
                         );
                       }
 
-                      if (opt.type === "radio") {
-                        return (
-                          <div key={key} className="space-y-2">
-                            <Label className="text-xs font-normal text-muted-foreground">
-                              {opt.label}
-                            </Label>
-                            <div className="space-y-2">
-                              {opt.options.map((choice) => {
-                                const id = `option-${key}-${String(choice.value)}`;
-                                return (
-                                  <label
-                                    key={id}
-                                    htmlFor={id}
-                                    className="flex items-center gap-2 text-sm"
-                                  >
-                                    <input
-                                      id={id}
-                                      type="radio"
-                                      name={`option-${key}`}
-                                      className="size-4 accent-primary"
-                                      checked={String(currentValue) === String(choice.value)}
-                                      onChange={() => updateOption(key, choice.value)}
-                                    />
-                                    <span>{choice.label}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            {description}
-                          </div>
-                        );
-                      }
+                      // if (opt.type === "radio") {
+                      //   return (
+                      //     <div key={key} className="space-y-2">
+                      //       <Label className="text-xs font-normal text-muted-foreground">
+                      //         {opt.label}
+                      //       </Label>
+                      //       <div
+                      //         className={cn(
+                      //           "grid gap-1",
+                      //           opt.options.every((choice) => choice.label.length < 10)
+                      //             ? "grid-cols-2"
+                      //             : "grid-cols-1",
+                      //         )}
+                      //       >
+                      //         {opt.options.map((choice) => {
+                      //           const id = `option-${key}-${String(choice.value)}`;
+                      //           return (
+                      //             <label
+                      //               key={id}
+                      //               htmlFor={id}
+                      //               className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
+                      //             >
+                      //               <input
+                      //                 id={id}
+                      //                 type="checkbox"
+                      //                 name={`option-${key}`}
+                      //                 className="size-4 accent-primary"
+                      //                 checked={String(currentValue) === String(choice.value)}
+                      //                 onChange={() => updateOption(key, choice.value)}
+                      //               />
+                      //               <span>{choice.label}</span>
+                      //             </label>
+                      //           );
+                      //         })}
+                      //       </div>
+                      //       {description}
+                      //     </div>
+                      //   );
+                      // }
 
-                      if (opt.type === "multiselect" || opt.type === "checkbox-group") {
-                        const values = Array.isArray(currentValue)
-                          ? currentValue
-                          : (opt.default ?? []);
+                      if (opt.type === "checkbox-group" || opt.type === "radio") {
+                        const isMulti = opt.type === "checkbox-group";
+                        const values = isMulti
+                          ? Array.isArray(currentValue)
+                            ? currentValue
+                            : (opt.default ?? [])
+                          : null;
                         return (
                           <div key={key} className="space-y-2">
                             <Label className="text-xs font-normal text-muted-foreground">
                               {opt.label}
                             </Label>
-                            <div className="space-y-2">
+                            <div
+                              className={cn(
+                                "grid gap-1",
+                                opt.options.every((choice) => choice.label.length < 10)
+                                  ? "grid-cols-2"
+                                  : "grid-cols-1",
+                              )}
+                            >
                               {opt.options.map((choice) => {
                                 const id = `option-${key}-${String(choice.value)}`;
-                                const isChecked = values.some(
-                                  (value) => String(value) === String(choice.value),
-                                );
+                                const isChecked = isMulti
+                                  ? Array.isArray(values) &&
+                                    values.some((value) => String(value) === String(choice.value))
+                                  : String(currentValue) === String(choice.value);
                                 return (
                                   <label
                                     key={id}
                                     htmlFor={id}
-                                    className="flex items-center gap-2 text-sm"
+                                    className="flex items-center gap-2 text-sm border border-border/40 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors cursor-pointer"
                                   >
                                     <Checkbox
                                       id={id}
                                       checked={isChecked}
                                       onCheckedChange={(checked) => {
-                                        const next = checked
-                                          ? [...values, choice.value]
-                                          : values.filter(
-                                              (value) => String(value) !== String(choice.value),
-                                            );
-                                        updateOption(key, next);
+                                        if (isMulti && Array.isArray(values)) {
+                                          const next = checked
+                                            ? [...values, choice.value]
+                                            : values.filter(
+                                                (value) => String(value) !== String(choice.value),
+                                              );
+                                          updateOption(key, next);
+                                        } else {
+                                          if (checked) {
+                                            updateOption(key, choice.value);
+                                          }
+                                        }
                                       }}
                                     />
                                     <span>{choice.label}</span>

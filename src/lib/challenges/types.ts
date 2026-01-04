@@ -46,7 +46,7 @@ export type SliderOption = OptionBase<number, "slider"> & {
   marks?: readonly number[];
 };
 
-export type ToggleOption = OptionBase<boolean, "toggle" | "checkbox">;
+export type ToggleOption = OptionBase<boolean, "checkbox">;
 
 export type SelectOption<Value extends string | number = string> = OptionBase<
   Value,
@@ -57,7 +57,7 @@ export type SelectOption<Value extends string | number = string> = OptionBase<
 
 export type MultiSelectOption<Value extends string | number = string> = OptionBase<
   Value[],
-  "multiselect" | "checkbox-group"
+  "checkbox-group"
 > & {
   options: readonly OptionChoice<Value>[];
 };
@@ -92,7 +92,7 @@ export const defineChallenge = <Options extends OptionDefinitions>(challenge: Ch
   challenge;
 
 type ChoiceOptionKind = "select" | "radio";
-type MultiChoiceOptionKind = "multiselect" | "checkbox-group";
+type MultiChoiceOptionKind = "checkbox-group";
 
 type ChoiceOptionDef<
   Options extends readonly OptionChoice<string | number>[],
@@ -143,13 +143,6 @@ export const multiChoiceOption = <
   default: Array<Options[number]["value"]>;
   options: Options;
 }) => ({ ...def }) as MultiChoiceOptionDef<Options, Kind>;
-
-export const multiselectOption = <Options extends readonly OptionChoice<string | number>[]>(def: {
-  label: string;
-  description?: string;
-  default: Array<Options[number]["value"]>;
-  options: Options;
-}) => multiChoiceOption({ type: "multiselect", ...def });
 
 export const checkboxGroupOption = <Options extends readonly OptionChoice<string | number>[]>(def: {
   label: string;
