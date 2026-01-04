@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "tags": ["-lintignore"],
+  "entry": [
+    "src/entrypoints/**/{main,index}.{ts,tsx}",
+    "src/entrypoints/tracker.content.ts",
+    "wxt.config.ts"
+  ],
+  "project": ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}"],
+  "ignoreDependencies": [
+    "babel-plugin-react-compiler",
+    "@wxt-dev/module-react",
+    "tailwindcss",
+    "shadcn",
+    "tw-animate-css",
+    "@fontsource-variable/inter"
+  ]
+}

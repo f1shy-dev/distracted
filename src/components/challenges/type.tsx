@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, memo } from "react";
 import { Input } from "@/components/ui/input";
-import { IconCheck } from "@tabler/icons-react";
-import type { ChallengeComponentProps } from "./index";
+import { IconCheck, IconKeyboard } from "@tabler/icons-react";
+import type { ChallengeComponentProps } from "@/lib/challenges/types";
+import { defineChallenge } from "@/lib/challenges/types";
 
 export const TypeChallenge = memo(({ onComplete }: ChallengeComponentProps<{}>) => {
   const [targetText] = useState(() => crypto.randomUUID());
@@ -94,3 +95,12 @@ export const TypeChallenge = memo(({ onComplete }: ChallengeComponentProps<{}>) 
 });
 
 TypeChallenge.displayName = "TypeChallenge";
+
+export const typeChallenge = defineChallenge({
+  label: "Type Text",
+  icon: <IconKeyboard className="size-5" />,
+  description: "Type a random UUID (no copy/paste)",
+  title: "Type to Access",
+  options: {},
+  render: (props) => <TypeChallenge {...props} />,
+});

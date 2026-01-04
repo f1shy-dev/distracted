@@ -1,6 +1,7 @@
-import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from "../consts";
+import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from "@/lib/consts";
 import type { BlockedSite, Schedule, SiteStats, StatsScope } from "./types";
 import type { StorageArea, StorageKey, StorageShape, StoredValue } from "./shared";
+import { getDefaultChallengeSettings, isUnlockMethod } from "@/lib/challenges/defaults";
 
 const DEFAULT_SCHEDULE: Schedule = {
   enabled: false,
@@ -48,6 +49,21 @@ function normalizeBlockedSite(site: BlockedSite): {
   }
   if ("strict" in normalized) {
     delete normalized.strict;
+    changed = true;
+  }
+
+  const method = isUnlockMethod(normalized.unlockMethod) ? normalized.unlockMethod : "timer";
+  const defaultSettings = getDefaultChallengeSettings(method);
+  const currentSettings = normalized.challengeSettings || {};
+
+  const defaultKeys = Object.keys(defaultSettings);
+  const missingKeys = defaultKeys.filter((key) => !(key in currentSettings));
+
+  if (missingKeys.length > 0) {
+    normalized.challengeSettings = {
+      ...defaultSettings,
+      ...currentSettings,
+    } as typeof normalized.challengeSettings;
     changed = true;
   }
 

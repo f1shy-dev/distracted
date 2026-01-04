@@ -1,6 +1,6 @@
 import { getBlockedSites, urlMatchesSiteRules, type BlockedSite } from "@/lib/storage";
 import { ALARM_PREFIX } from "@/lib/consts";
-import { isInternalUrl } from "../utils";
+import { isInternalUrl } from "@/entrypoints/background/utils";
 
 interface UnlockState {
   siteId: string;

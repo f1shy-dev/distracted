@@ -9,7 +9,7 @@ import {
   IconArrowLeft,
   IconLockOpen,
 } from "@tabler/icons-react";
-import { CHALLENGES } from "@/components/challenges";
+import { CHALLENGES } from "@/lib/challenges";
 import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
 import { getUnlockGuard, isContinuousUnlockMethod } from "@/lib/unlock-guards";
 import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";

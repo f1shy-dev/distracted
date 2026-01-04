@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from "../consts";
+import { STORAGE_KEYS } from "@/lib/consts";
 import type { BlockedSite, SiteStats, Settings } from "./types";
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

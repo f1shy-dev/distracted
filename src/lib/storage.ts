@@ -11,7 +11,7 @@ import type {
 import type { StorageArea, StorageKey, StorageShape, StoredValue } from "./storage/shared";
 
 export type { PatternRule, BlockedSite, Schedule, SiteStats, Settings, StatsScope };
-export type { UnlockMethod, ChallengeSettingsMap } from "@/components/challenges";
+export type { UnlockMethod, ChallengeSettingsMap } from "@/lib/challenges";
 export { normalizeStats } from "./storage/migrations";
 
 export const defaultSettings: Settings = {

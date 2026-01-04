@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { IconHandStop, IconCheck } from "@tabler/icons-react";
-import type { ChallengeComponentProps } from "./index";
+import type { ChallengeComponentProps } from "@/lib/challenges/types";
+import { defineChallenge } from "@/lib/challenges/types";
 
 export const HoldChallenge = memo(
   ({ settings, onComplete }: ChallengeComponentProps<{ duration: number }>) => {
@@ -105,3 +106,20 @@ export const HoldChallenge = memo(
 );
 
 HoldChallenge.displayName = "HoldChallenge";
+
+export const holdChallenge = defineChallenge({
+  label: "Hold Button",
+  icon: <IconHandStop className="size-5" />,
+  description: "Hold a button continuously",
+  title: "Hold to Access",
+  options: {
+    duration: {
+      type: "number",
+      label: "Duration (seconds)",
+      default: 10,
+      description: "How long to hold the button for",
+      min: 1,
+    },
+  },
+  render: (props) => <HoldChallenge {...props} />,
+});

@@ -19,7 +19,7 @@ import {
   CHALLENGES,
   getDefaultChallengeSettings,
   type ChallengeSettingsMap,
-} from "@/components/challenges";
+} from "@/lib/challenges";
 import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
 import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";
 import { isContinuousUnlockMethod } from "@/lib/unlock-guards";
