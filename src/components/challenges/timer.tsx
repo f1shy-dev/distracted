@@ -90,9 +90,8 @@ export const timerChallenge = defineChallenge({
   options: {
     duration: {
       type: "number",
-      label: "Duration (seconds)",
+      label: "Timer duration (seconds)",
       default: 10,
-      description: "The duration of the timer",
       min: 1,
     },
   },

@@ -236,9 +236,8 @@ export const claudeBlockerChallenge = defineChallenge({
   options: {
     serverUrl: {
       type: "text",
-      label: "Server URL",
+      label: "Claude Blocker Server URL",
       default: "http://localhost:8765",
-      description: "Claude Blocker server base URL",
     },
     allowWhileWaitingForInput: {
       type: "checkbox",

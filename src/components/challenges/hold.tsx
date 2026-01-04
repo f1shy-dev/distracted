@@ -115,9 +115,8 @@ export const holdChallenge = defineChallenge({
   options: {
     duration: {
       type: "number",
-      label: "Duration (seconds)",
+      label: "Hold duration (seconds)",
       default: 10,
-      description: "How long to hold the button for",
       min: 1,
     },
   },

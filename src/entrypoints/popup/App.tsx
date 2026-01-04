@@ -12,7 +12,6 @@ import {
   type PatternRule,
   type Schedule,
   saveBlockedSites,
-  isSyncAvailable,
 } from "@/lib/storage";
 import { DEFAULT_AUTO_RELOCK, STORAGE_KEYS } from "@/lib/consts";
 import {
@@ -23,12 +22,21 @@ import {
 import { ChallengeInstructionsPanel } from "@/components/challenges/instructions";
 import { ClaudeBlockerDebug } from "@/components/challenges/claude-blocker";
 import { isContinuousUnlockMethod } from "@/lib/unlock-guards";
+import type { OptionDefinition } from "@/lib/challenges/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   IconPlus,
   IconTrash,
@@ -43,7 +51,9 @@ import {
   IconX,
   IconWorld,
   IconClockHour5Filled,
+  IconLeaf,
 } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 type View = "main" | "add" | "edit" | "stats" | "settings";
 const DEFAULT_UNLOCK_METHOD: UnlockMethod = "timer";
@@ -62,19 +72,22 @@ const PatternRuleItem = memo(function PatternRuleItem({
   canDelete: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <Button
         type="button"
         variant="ghost"
-        size="icon-sm"
+        size="icon"
         onClick={() => onUpdate({ allow: !rule.allow })}
-        className={
+        className={cn(
+          "border",
           rule.allow
-            ? "text-green-500 hover:text-green-400"
-            : "text-destructive hover:text-destructive/80"
-        }
+            ? "border-green-500/10 hover:border-green-500/20 bg-green-500/10 text-green-500 hover:bg-green-500/20! hover:text-green-500!"
+            : "border-destructive/10 hover:border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20! hover:text-destructive!",
+        )}
+        title={rule.allow ? "Allow" : "Block"}
       >
         {rule.allow ? <IconCheck className="size-4" /> : <IconX className="size-4" />}
+        <span className="sr-only">{rule.allow ? "Allow" : "Block"}</span>
       </Button>
       <Input
         value={rule.pattern}
@@ -83,13 +96,7 @@ const PatternRuleItem = memo(function PatternRuleItem({
         className="flex-1 font-mono text-sm"
       />
       {canDelete && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onDelete}
-          className="text-muted-foreground hover:text-destructive"
-        >
+        <Button type="button" variant="muted" size="icon" onClick={onDelete}>
           <IconTrash className="size-4" />
         </Button>
       )}
@@ -246,7 +253,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [editingSite, setEditingSite] = useState<BlockedSite | null>(null);
   const [statsView, setStatsView] = useState<"filter" | "website">("filter");
-  const syncAvailable = isSyncAvailable();
 
   const [formName, setFormName] = useState("");
   const [formRules, setFormRules] = useState<PatternRule[]>([{ pattern: "", allow: false }]);
@@ -460,7 +466,7 @@ export default function App() {
 
   return (
     <div className="w-[400px] h-[520px] bg-background text-foreground flex flex-col overflow-hidden dark">
-      <div className="flex items-center justify-between p-4 border-b border-border/30 bg-muted/30">
+      <div className="flex items-center justify-between px-4 h-12 border-b border-border/30 bg-muted/30">
         <div className="flex items-center gap-2">
           {view !== "main" && (
             <Button variant="ghost" size="icon-sm" onClick={handleBackToMain}>
@@ -468,7 +474,7 @@ export default function App() {
             </Button>
           )}
           <IconClockHour5Filled className="size-5 text-primary" />
-          <h1 className="text-lg font-bold tracking-tight">
+          <h1 className="text-lg font-medium">
             {view === "main" && "distracted"}
             {view === "add" && "Block Site"}
             {view === "edit" && "Edit Block"}
@@ -477,23 +483,12 @@ export default function App() {
           </h1>
         </div>
         {view === "main" && (
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="text-[10px] uppercase tracking-wide"
-              title={
-                syncAvailable
-                  ? "Sync storage available"
-                  : "Sync storage unavailable; using local storage"
-              }
-            >
-              {syncAvailable ? "Sync" : "Local"}
-            </Badge>
-            <Button variant="ghost" size="icon-sm" onClick={() => setView("stats")}>
-              <IconChartBar className="size-4" />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setView("stats")}>
+              <IconChartBar />
             </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => setView("settings")}>
-              <IconSettings className="size-4" />
+            <Button variant="ghost" size="icon" onClick={() => setView("settings")}>
+              <IconSettings />
             </Button>
           </div>
         )}
@@ -503,10 +498,39 @@ export default function App() {
         {view === "main" && (
           <div className="space-y-3">
             {sites.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <IconClockHour5Filled className="size-12 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">No blocked sites yet</p>
-                <p className="text-xs mt-1">Add your first distraction to block</p>
+              <div>
+                <div className="space-y-6">
+                  {[
+                    {
+                      icon: IconPlus,
+                      title: "Add your first distraction",
+                      desc: "Start by adding your first distraction",
+                    },
+                    {
+                      icon: IconWorld,
+                      title: "Configure patterns",
+                      desc: "Set up websites to block with a simple challenge",
+                    },
+                    {
+                      icon: IconLeaf,
+                      title: "Enjoy your time",
+                      desc: "Reduce wasted time and regain your focus and productivity",
+                    },
+                  ].map((step, i) => (
+                    <div className="flex items-start gap-2 relative" key={i}>
+                      {i != 0 && (
+                        <div className="h-[70%] bg-muted-foreground/25 absolute left-[10px] translate-x-[-50%] -translate-y-9 w-px" />
+                      )}
+                      <step.icon className="size-5 text-muted-foreground mt-0.5" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-foreground">{step.title}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{step.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               sites.map((site) => (
@@ -578,7 +602,7 @@ export default function App() {
 
             <div className="space-y-2">
               <Label>Unlock Method</Label>
-              <div className="grid gap-2">
+              <div className="grid gap-1.25">
                 {(Object.keys(CHALLENGES) as UnlockMethod[]).map((method) => {
                   const challenge = CHALLENGES[method];
                   return (
@@ -589,8 +613,10 @@ export default function App() {
                         setFormMethod(method);
                         setFormChallengeSettings(getDefaultChallengeSettings(method));
                       }}
-                      className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${
-                        formMethod === method ? "bg-primary/15" : "bg-muted/30 hover:bg-muted/50"
+                      className={`flex items-center gap-2 px-1.5 py-1.25 rounded-xl text-left transition-all ${
+                        formMethod === method
+                          ? "bg-secondary border border-secondary"
+                          : "border border-border/40 hover:bg-muted/50"
                       }`}
                     >
                       <div
@@ -617,49 +643,256 @@ export default function App() {
               const optionEntries = Object.entries(challenge.options);
               if (optionEntries.length === 0) return null;
 
+              const updateOption = (key: string, value: unknown) => {
+                setFormChallengeSettings((prev) => ({
+                  ...prev,
+                  [key]: value,
+                }));
+              };
+
               return (
                 <div className="space-y-3">
                   <Label>Challenge Options</Label>
-                  <div
-                    className={`grid gap-3 ${optionEntries.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
-                  >
-                    {optionEntries.map(([key, opt]) => (
-                      <div key={key} className="space-y-1">
-                        <Label
-                          htmlFor={`option-${key}`}
-                          className="text-xs font-normal text-muted-foreground"
-                        >
-                          {(opt as { label: string }).label}
-                        </Label>
-                        <Input
-                          id={`option-${key}`}
-                          type={
-                            typeof (opt as { default: unknown }).default === "number"
-                              ? "number"
-                              : "text"
-                          }
-                          min={
-                            typeof (opt as { default: unknown }).default === "number"
-                              ? "1"
-                              : undefined
-                          }
-                          value={String(
-                            formChallengeSettings[key as keyof typeof formChallengeSettings] ??
-                              (opt as { default: unknown }).default,
-                          )}
-                          onChange={(e) => {
-                            const value =
-                              typeof (opt as { default: unknown }).default === "number"
-                                ? parseInt(e.target.value) || 0
-                                : e.target.value;
-                            setFormChallengeSettings((prev) => ({
-                              ...prev,
-                              [key]: value,
-                            }));
-                          }}
-                        />
-                      </div>
-                    ))}
+                  <div className={`grid gap-3`}>
+                    {optionEntries.map(([key, option]) => {
+                      const opt = option as OptionDefinition;
+                      const currentValue =
+                        formChallengeSettings[key as keyof typeof formChallengeSettings] ??
+                        opt.default;
+
+                      const description = opt.description ? (
+                        <p className="text-xs text-muted-foreground">{opt.description}</p>
+                      ) : null;
+
+                      if (opt.type === "toggle" || opt.type === "checkbox") {
+                        return (
+                          <div key={key} className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 px-3 py-2">
+                              <Label htmlFor={`option-${key}`} className="text-sm font-normal">
+                                {opt.label}
+                              </Label>
+                              <Checkbox
+                                id={`option-${key}`}
+                                checked={Boolean(currentValue)}
+                                onCheckedChange={(checked) => updateOption(key, !!checked)}
+                              />
+                            </div>
+                            {description}
+                          </div>
+                        );
+                      }
+
+                      if (opt.type === "select") {
+                        return (
+                          <div key={key} className="space-y-1">
+                            <Label
+                              htmlFor={`option-${key}`}
+                              className="text-xs font-normal text-muted-foreground"
+                            >
+                              {opt.label}
+                            </Label>
+                            <Select
+                              value={String(currentValue)}
+                              onValueChange={(value) => {
+                                const selected = opt.options.find(
+                                  (choice) => String(choice.value) === value,
+                                );
+                                if (selected) {
+                                  updateOption(key, selected.value);
+                                }
+                              }}
+                            >
+                              <SelectTrigger id={`option-${key}`} className="w-full">
+                                <SelectValue>{opt.label}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {opt.options.map((choice) => (
+                                  <SelectItem
+                                    key={String(choice.value)}
+                                    value={String(choice.value)}
+                                  >
+                                    {choice.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {description}
+                          </div>
+                        );
+                      }
+
+                      if (opt.type === "radio") {
+                        return (
+                          <div key={key} className="space-y-2">
+                            <Label className="text-xs font-normal text-muted-foreground">
+                              {opt.label}
+                            </Label>
+                            <div className="space-y-2">
+                              {opt.options.map((choice) => {
+                                const id = `option-${key}-${String(choice.value)}`;
+                                return (
+                                  <label
+                                    key={id}
+                                    htmlFor={id}
+                                    className="flex items-center gap-2 text-sm"
+                                  >
+                                    <input
+                                      id={id}
+                                      type="radio"
+                                      name={`option-${key}`}
+                                      className="size-4 accent-primary"
+                                      checked={String(currentValue) === String(choice.value)}
+                                      onChange={() => updateOption(key, choice.value)}
+                                    />
+                                    <span>{choice.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            {description}
+                          </div>
+                        );
+                      }
+
+                      if (opt.type === "multiselect" || opt.type === "checkbox-group") {
+                        const values = Array.isArray(currentValue)
+                          ? currentValue
+                          : (opt.default ?? []);
+                        return (
+                          <div key={key} className="space-y-2">
+                            <Label className="text-xs font-normal text-muted-foreground">
+                              {opt.label}
+                            </Label>
+                            <div className="space-y-2">
+                              {opt.options.map((choice) => {
+                                const id = `option-${key}-${String(choice.value)}`;
+                                const isChecked = values.some(
+                                  (value) => String(value) === String(choice.value),
+                                );
+                                return (
+                                  <label
+                                    key={id}
+                                    htmlFor={id}
+                                    className="flex items-center gap-2 text-sm"
+                                  >
+                                    <Checkbox
+                                      id={id}
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        const next = checked
+                                          ? [...values, choice.value]
+                                          : values.filter(
+                                              (value) => String(value) !== String(choice.value),
+                                            );
+                                        updateOption(key, next);
+                                      }}
+                                    />
+                                    <span>{choice.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            {description}
+                          </div>
+                        );
+                      }
+
+                      if (opt.type === "slider") {
+                        const listId = opt.marks?.length ? `option-${key}-marks` : undefined;
+                        return (
+                          <div key={key} className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <Label
+                                htmlFor={`option-${key}`}
+                                className="text-xs font-normal text-muted-foreground"
+                              >
+                                {opt.label}
+                              </Label>
+                              <span className="text-xs text-muted-foreground">{currentValue}</span>
+                            </div>
+                            <input
+                              id={`option-${key}`}
+                              type="range"
+                              className="w-full accent-primary"
+                              min={opt.min}
+                              max={opt.max}
+                              step={opt.step}
+                              list={listId}
+                              value={Number(currentValue)}
+                              onChange={(e) => {
+                                const value = Number.parseFloat(e.target.value);
+                                updateOption(key, Number.isNaN(value) ? opt.min : value);
+                              }}
+                            />
+                            {opt.marks?.length ? (
+                              <datalist id={listId}>
+                                {opt.marks.map((mark) => (
+                                  <option key={mark} value={mark} />
+                                ))}
+                              </datalist>
+                            ) : null}
+                            {description}
+                          </div>
+                        );
+                      }
+
+                      if (opt.type === "number") {
+                        return (
+                          <div key={key} className="space-y-1">
+                            <Label
+                              htmlFor={`option-${key}`}
+                              className="text-xs font-normal text-muted-foreground"
+                            >
+                              {opt.label}
+                            </Label>
+                            <Input
+                              id={`option-${key}`}
+                              type="number"
+                              min={opt.min}
+                              max={opt.max}
+                              step={opt.step}
+                              value={String(currentValue)}
+                              onChange={(e) => {
+                                const value = Number.parseFloat(e.target.value);
+                                updateOption(key, Number.isNaN(value) ? (opt.min ?? 0) : value);
+                              }}
+                            />
+                            {description}
+                          </div>
+                        );
+                      }
+
+                      if (opt.type === "text") {
+                        return (
+                          <div key={key} className="space-y-1">
+                            <Label
+                              htmlFor={`option-${key}`}
+                              className="text-xs font-normal text-muted-foreground"
+                            >
+                              {opt.label}
+                            </Label>
+                            {opt.multiline ? (
+                              <Textarea
+                                id={`option-${key}`}
+                                rows={3}
+                                value={String(currentValue)}
+                                onChange={(e) => updateOption(key, e.target.value)}
+                              />
+                            ) : (
+                              <Input
+                                id={`option-${key}`}
+                                type="text"
+                                placeholder={opt.placeholder}
+                                value={String(currentValue)}
+                                onChange={(e) => updateOption(key, e.target.value)}
+                              />
+                            )}
+                            {description}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
                 </div>
               );
@@ -681,7 +914,7 @@ export default function App() {
               </ChallengeInstructionsPanel>
             )}
 
-            {!isContinuousUnlockMethod(formMethod) ? (
+            {formMethod === "strict" || isContinuousUnlockMethod(formMethod) ? null : (
               <div className="space-y-2">
                 <Label htmlFor="relock">Auto-relock (minutes)</Label>
                 <Input
@@ -696,10 +929,6 @@ export default function App() {
                   How long until the site is blocked again after unlocking
                 </p>
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Access stays open only while the unlock condition is active.
-              </p>
             )}
 
             <div className="space-y-3 pt-2 border-t border-border/30">
@@ -907,7 +1136,7 @@ export default function App() {
       </div>
 
       {view === "main" && (
-        <div className="p-4 border-t border-border/30 bg-muted/20">
+        <div className="p-3">
           <Button onClick={() => setView("add")} className="w-full">
             <IconPlus className="size-4" />
             Block a Website
