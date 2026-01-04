@@ -54,6 +54,8 @@ import {
   IconWorld,
   IconClockHour5Filled,
   IconLeaf,
+  IconBrandGithub,
+  IconArrowUpRight,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
@@ -137,35 +139,34 @@ const SiteItem = memo(function SiteItem({
     <div
       className={`group p-3 rounded-lg transition-all ${
         site.enabled ? "bg-muted/40" : "bg-muted/20 opacity-60"
-      }`}
+      } relative`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-medium text-sm truncate">{site.name}</span>
-          <Badge variant={site.enabled ? "default" : "secondary"} className="text-xs shrink-0">
-            {challenge.label}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon-sm" onClick={() => onEdit(site)}>
-            <IconEdit className="size-4" />
-          </Button>
-          <Button variant="ghost" size="icon-sm" onClick={() => onToggle(site.id, !site.enabled)}>
-            {site.enabled ? (
-              <IconPlayerPause className="size-4" />
-            ) : (
-              <IconPlayerPlay className="size-4" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => onDelete(site.id)}
-            className="text-destructive hover:text-destructive"
-          >
-            <IconTrash className="size-4" />
-          </Button>
-        </div>
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button variant="ghost" size="icon-sm" onClick={() => onEdit(site)}>
+          <IconEdit className="size-4" />
+        </Button>
+        <Button variant="ghost" size="icon-sm" onClick={() => onToggle(site.id, !site.enabled)}>
+          {site.enabled ? (
+            <IconPlayerPause className="size-4" />
+          ) : (
+            <IconPlayerPlay className="size-4" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onDelete(site.id)}
+          className="text-destructive hover:text-destructive"
+        >
+          <IconTrash className="size-4" />
+        </Button>
+      </div>
+
+      <div className="flex items-center mb-2 gap-2">
+        <span className="font-medium text-sm truncate">{site.name}</span>
+        <Badge variant={site.enabled ? "default" : "secondary"} className="text-xs shrink-0">
+          {challenge.label}
+        </Badge>
       </div>
 
       <div className="space-y-1">
@@ -486,55 +487,49 @@ export default function App() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
+      <div className={cn("flex-1 overflow-y-auto scrollbar-thin", view !== "main" && "p-4")}>
         {view === "main" && (
-          <div className="space-y-3">
-            {sites.length === 0 ? (
-              <div>
-                <div className="space-y-6">
-                  {[
-                    {
-                      icon: IconPlus,
-                      title: "Add your first distraction",
-                      desc: "Start by adding your first distraction",
-                    },
-                    {
-                      icon: IconWorld,
-                      title: "Configure patterns",
-                      desc: "Set up websites to block with a simple challenge",
-                    },
-                    {
-                      icon: IconLeaf,
-                      title: "Enjoy your time",
-                      desc: "Reduce wasted time and regain your focus and productivity",
-                    },
-                  ].map((step, i) => (
-                    <div className="flex items-start gap-2 relative" key={i}>
-                      {i != 0 && (
-                        <div className="h-[70%] bg-muted-foreground/25 absolute left-[10px] translate-x-[-50%] -translate-y-9 w-px" />
-                      )}
-                      <step.icon className="size-5 text-muted-foreground mt-0.5" />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-foreground">{step.title}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{step.desc}</p>
+          <div className={cn(sites.length === 0 ? "p-4 space-y-6" : "p-3 space-y-2")}>
+            {sites.length === 0
+              ? [
+                  {
+                    icon: IconPlus,
+                    title: "Add your first distraction",
+                    desc: "Start by adding your first distraction",
+                  },
+                  {
+                    icon: IconWorld,
+                    title: "Configure patterns",
+                    desc: "Set up websites to block with a simple challenge",
+                  },
+                  {
+                    icon: IconLeaf,
+                    title: "Enjoy your time",
+                    desc: "Reduce wasted time and regain your focus and productivity",
+                  },
+                ].map((step, i) => (
+                  <div className="flex items-start gap-2 relative" key={i}>
+                    {i != 0 && (
+                      <div className="h-[70%] bg-muted-foreground/25 absolute left-[10px] translate-x-[-50%] -translate-y-9 w-px" />
+                    )}
+                    <step.icon className="size-5 text-muted-foreground mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-foreground">{step.title}</p>
                       </div>
+                      <p className="text-xs text-muted-foreground">{step.desc}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              sites.map((site) => (
-                <SiteItem
-                  key={site.id}
-                  site={site}
-                  onToggle={handleToggleSite}
-                  onEdit={handleEditSite}
-                  onDelete={handleDeleteSite}
-                />
-              ))
-            )}
+                  </div>
+                ))
+              : sites.map((site) => (
+                  <SiteItem
+                    key={site.id}
+                    site={site}
+                    onToggle={handleToggleSite}
+                    onEdit={handleEditSite}
+                    onDelete={handleDeleteSite}
+                  />
+                ))}
           </div>
         )}
 
@@ -1081,7 +1076,7 @@ export default function App() {
 
         {view === "settings" && (
           <div className="space-y-4">
-            <Card className="bg-muted/30">
+            <Card className="bg-muted/30 gap-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">Privacy</CardTitle>
               </CardHeader>
@@ -1093,13 +1088,7 @@ export default function App() {
                       Track visits, pass rate, and time spent
                     </div>
                   </div>
-                  <Button
-                    variant={settings.statsEnabled ? "default" : "outline"}
-                    size="sm"
-                    onClick={handleToggleStats}
-                  >
-                    {settings.statsEnabled ? "Enabled" : "Disabled"}
-                  </Button>
+                  <Checkbox checked={settings.statsEnabled} onCheckedChange={handleToggleStats} />
                 </div>
                 {settings.statsEnabled && stats.length > 0 && (
                   <Button
@@ -1115,15 +1104,45 @@ export default function App() {
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/30">
-              <CardHeader className="pb-2">
+            <Card className="bg-muted/30 gap-2">
+              <CardHeader>
                 <CardTitle className="text-sm">About</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  distracted helps you stay focused by blocking distracting websites. All data is
-                  stored locally and never leaves your device.
+                  mindless visiting is more and more common. you end up idling, and then end up on a
+                  site you didn't want to be on in the first place.
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  distracted gives you a boring, non-stimulating task. having to wait, hold the
+                  button or so on is like giving your mind time to think about what you're doing
+                  consciously, or making it annoying enough that you don't want to do it.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  all data stays local on your device and never leaves it.
+                </p>
+                <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  made with ❤️ by{" "}
+                  <a
+                    href="https://github.com/f1shy-dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                  >
+                    <IconBrandGithub className="size-4" />
+                    f1shy-dev
+                  </a>
+                </p>
+
+                <a
+                  className="text-xs text-muted-foreground inline-block hover:text-primary transition-colors"
+                  href="https://github.com/f1shy-dev/distracted/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <IconArrowUpRight className="size-4 inline-flex -ml-0.5 mr-1" />
+                  got an problem, issue or suggestion?
+                </a>
               </CardContent>
             </Card>
           </div>
