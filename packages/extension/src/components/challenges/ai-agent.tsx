@@ -38,129 +38,131 @@ const getDebugState = (state: { active: boolean; reason?: string }): DebugState 
   return { label: "Blocked", tone: "warning" };
 };
 
-const AiAgentChallenge = memo(({ settings, onComplete }: ChallengeComponentProps<AiAgentSettings>) => {
-  const [status, setStatus] = useState<AiAgentStatus>("idle");
-  const [message, setMessage] = useState<string | null>(null);
-  const [completed, setCompleted] = useState(false);
-  const checkingRef = useRef(false);
+const AiAgentChallenge = memo(
+  ({ settings, onComplete }: ChallengeComponentProps<AiAgentSettings>) => {
+    const [status, setStatus] = useState<AiAgentStatus>("idle");
+    const [message, setMessage] = useState<string | null>(null);
+    const [completed, setCompleted] = useState(false);
+    const checkingRef = useRef(false);
 
-  const checkStatus = useCallback(
-    async (mode: "auto" | "manual" = "manual") => {
-      if (completed) return;
-      if (checkingRef.current) return;
+    const checkStatus = useCallback(
+      async (mode: "auto" | "manual" = "manual") => {
+        if (completed) return;
+        if (checkingRef.current) return;
 
-      checkingRef.current = true;
-      if (mode === "manual") {
-        setStatus("checking");
-        setMessage(null);
-      }
+        checkingRef.current = true;
+        if (mode === "manual") {
+          setStatus("checking");
+          setMessage(null);
+        }
 
-      if (!guard) {
-        setStatus("error");
-        setMessage("AI agent guard unavailable.");
+        if (!guard) {
+          setStatus("error");
+          setMessage("AI agent guard unavailable.");
+          checkingRef.current = false;
+          return;
+        }
+
+        const result = await guard.check(settings);
+        if (result.active) {
+          setStatus("active");
+          setCompleted(true);
+          onComplete();
+          checkingRef.current = false;
+          return;
+        }
+
+        if (result.reason === "invalid_url") {
+          setStatus("error");
+          setMessage("Enter a valid server URL.");
+          checkingRef.current = false;
+          return;
+        }
+
+        if (result.reason === "server_error") {
+          setStatus("error");
+          setMessage("Server error.");
+          checkingRef.current = false;
+          return;
+        }
+
+        if (result.reason === "offline") {
+          setStatus("error");
+          setMessage("Server offline or unreachable.");
+          checkingRef.current = false;
+          return;
+        }
+
+        setStatus("inactive");
+        if (result.reason === "waiting") {
+          setMessage("AI agent is waiting for your input.");
+        } else if (mode === "manual") {
+          setMessage(null);
+        }
         checkingRef.current = false;
-        return;
-      }
+      },
+      [completed, onComplete, settings],
+    );
 
-      const result = await guard.check(settings);
-      if (result.active) {
-        setStatus("active");
-        setCompleted(true);
-        onComplete();
-        checkingRef.current = false;
-        return;
-      }
+    useEffect(() => {
+      setCompleted(false);
+      setStatus("idle");
+      setMessage(null);
+    }, [settings.serverUrl]);
 
-      if (result.reason === "invalid_url") {
-        setStatus("error");
-        setMessage("Enter a valid server URL.");
-        checkingRef.current = false;
-        return;
-      }
-
-      if (result.reason === "server_error") {
-        setStatus("error");
-        setMessage("Server error.");
-        checkingRef.current = false;
-        return;
-      }
-
-      if (result.reason === "offline") {
-        setStatus("error");
-        setMessage("Server offline or unreachable.");
-        checkingRef.current = false;
-        return;
-      }
-
-      setStatus("inactive");
-      if (result.reason === "waiting") {
-        setMessage("AI agent is waiting for your input.");
-      } else if (mode === "manual") {
-        setMessage(null);
-      }
-      checkingRef.current = false;
-    },
-    [completed, onComplete, settings],
-  );
-
-  useEffect(() => {
-    setCompleted(false);
-    setStatus("idle");
-    setMessage(null);
-  }, [settings.serverUrl]);
-
-  useEffect(() => {
-    void checkStatus("auto");
-  }, [checkStatus]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
+    useEffect(() => {
       void checkStatus("auto");
-    }, 500);
-    return () => clearInterval(interval);
-  }, [checkStatus]);
+    }, [checkStatus]);
 
-  return (
-    <div className="space-y-4">
-      <div className="min-h-6 flex items-center justify-center gap-2">
-        {status === "active" ? (
-          <>
-            <IconCheck className="size-5 text-green-500" />
-            <span className="text-green-500">AI agent is working. You can continue.</span>
-          </>
-        ) : status === "error" ? (
-          <>
-            <IconAlertTriangle className="size-5 text-destructive" />
-            <span className="text-destructive">Unable to reach the server.</span>
-          </>
-        ) : (
-          <>
-            <IconAlertTriangle className="size-5 text-muted-foreground" />
-            <span className="text-muted-foreground">
-              {message ?? "AI agent is idle. Start a session to unlock."}
-            </span>
-          </>
-        )}
+    useEffect(() => {
+      const interval = setInterval(() => {
+        void checkStatus("auto");
+      }, 500);
+      return () => clearInterval(interval);
+    }, [checkStatus]);
+
+    return (
+      <div className="space-y-4">
+        <div className="min-h-6 flex items-center justify-center gap-2">
+          {status === "active" ? (
+            <>
+              <IconCheck className="size-5 text-green-500" />
+              <span className="text-green-500">AI agent is working. You can continue.</span>
+            </>
+          ) : status === "error" ? (
+            <>
+              <IconAlertTriangle className="size-5 text-destructive" />
+              <span className="text-destructive">Unable to reach the server.</span>
+            </>
+          ) : (
+            <>
+              <IconAlertTriangle className="size-5 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                {message ?? "AI agent is idle. Start a session to unlock."}
+              </span>
+            </>
+          )}
+        </div>
+
+        <Button
+          onClick={() => void checkStatus("manual")}
+          className="w-full"
+          variant={completed ? "outline" : "default"}
+          disabled={status === "checking" || completed}
+        >
+          <IconRefresh className={`size-4 ${status === "checking" ? "animate-spin" : ""}`} />
+          {status === "checking"
+            ? "Checking..."
+            : completed
+              ? "AI Agent Active"
+              : "Check AI Agent Status"}
+        </Button>
+
+        <p className="min-h-4 text-xs text-center text-muted-foreground">{message ?? "\u00A0"}</p>
       </div>
-
-      <Button
-        onClick={() => void checkStatus("manual")}
-        className="w-full"
-        variant={completed ? "outline" : "default"}
-        disabled={status === "checking" || completed}
-      >
-        <IconRefresh className={`size-4 ${status === "checking" ? "animate-spin" : ""}`} />
-        {status === "checking"
-          ? "Checking..."
-          : completed
-            ? "AI Agent Active"
-            : "Check AI Agent Status"}
-      </Button>
-
-      <p className="min-h-4 text-xs text-center text-muted-foreground">{message ?? "\u00A0"}</p>
-    </div>
-  );
-});
+    );
+  },
+);
 
 AiAgentChallenge.displayName = "AiAgentChallenge";
 

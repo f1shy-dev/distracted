@@ -18,12 +18,12 @@
     }
   },
   "scripts": {
-    "lint": "bun run --workspaces --if-present lint",
-    "lint:fix": "bun run --workspaces --if-present lint:fix",
-    "lint:ci": "bun run --workspaces --if-present lint:ci",
-    "format": "bun run --workspaces --if-present format",
-    "knip": "bun run --workspaces --if-present knip",
-    "check": "bun run --workspaces --if-present check",
+    "lint": "for d in packages/*; do [ -f \"$d/package.json\" ] && (cd \"$d\" && bun run --if-present lint); done",
+    "lint:fix": "for d in packages/*; do [ -f \"$d/package.json\" ] && (cd \"$d\" && bun run --if-present lint:fix); done",
+    "lint:ci": "for d in packages/*; do [ -f \"$d/package.json\" ] && (cd \"$d\" && bun run --if-present lint:ci); done",
+    "format": "for d in packages/*; do [ -f \"$d/package.json\" ] && (cd \"$d\" && bun run --if-present format); done",
+    "knip": "for d in packages/*; do [ -f \"$d/package.json\" ] && (cd \"$d\" && bun run --if-present knip); done",
+    "check": "bun run lint:fix && bun run format && bun run knip",
     "clean": "rm -rf node_modules && rm -rf packages/*/node_modules && bun run --workspaces --if-present clean"
   },
   "devDependencies": {

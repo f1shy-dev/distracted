@@ -15,7 +15,7 @@ export type AiAgentStateMessage = {
   waitingForInput?: number;
 };
 
-export function resolveAiAgentStatusUrl(serverUrl: string): string | null {
+function resolveAiAgentStatusUrl(serverUrl: string): string | null {
   const trimmed = serverUrl.trim();
   if (!trimmed) return null;
   try {

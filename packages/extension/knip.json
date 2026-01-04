@@ -20,6 +20,7 @@
     "@fontsource-variable/inter"
   ],
   "ignoreIssues": {
-    "src/components/ui/*.tsx": ["exports"]
+    "src/components/ui/*.tsx": ["exports"],
+    "src/lib/challenges/options.ts": ["exports"]
   }
 }
