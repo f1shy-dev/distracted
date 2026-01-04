@@ -53,4 +53,4 @@ jobs:
 
       - name: Publish to NPM
         working-directory: packages/server
-        run: npm publish --access public
+        run: npm publish --access public --provenance

@@ -19,7 +19,7 @@
   "author": "f1shy-dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/f1shy-dev/distracted.git"
+    "url": "git+https://github.com/f1shy-dev/distracted.git"
   },
   "type": "module",
   "scripts": {
