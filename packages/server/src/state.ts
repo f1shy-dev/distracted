@@ -1,6 +1,8 @@
 import type { HookPayload, ServerMessage, Session } from "./types";
 import { SESSION_TIMEOUT_MS, USER_INPUT_TOOLS } from "./types";
 import { UI } from "@/lib/ui";
+import { getCapyStatus } from "./lib/capy-client";
+import { isCapyConfigured } from "./setup/capy";
 
 type StateChangeCallback = (message: ServerMessage) => void;
 type StateMessage = Extract<ServerMessage, { type: "state" }>;
@@ -9,6 +11,7 @@ class SessionState {
   private sessions: Map<string, Session> = new Map();
   private listeners: Set<StateChangeCallback> = new Set();
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+  private capyPollInterval: ReturnType<typeof setInterval> | null = null;
   private lastLoggedState:
     | { blocked: boolean; sessions: number; working: number; waitingForInput: number }
     | undefined = undefined;
@@ -183,6 +186,50 @@ class SessionState {
     if (removed > 0) this.broadcast();
   }
 
+  async startCapyPolling(pollIntervalMs: number = 5000): Promise<void> {
+    if (this.capyPollInterval) return;
+
+    const configured = await isCapyConfigured();
+    if (!configured) return;
+
+    const sessionId = "capy-virtual-session";
+
+    const pollCapy = async () => {
+      const status = await getCapyStatus();
+      UI.println(UI.Style.TEXT_DIM + `[capy] ${JSON.stringify(status)}` + UI.Style.TEXT_NORMAL);
+
+      if (status.working > 0) {
+        this.sessions.set(sessionId, {
+          id: sessionId,
+          status: "working",
+          lastActivity: new Date(),
+          cwd: undefined,
+        });
+      } else {
+        const existing = this.sessions.get(sessionId);
+        if (existing) {
+          existing.status = "idle";
+          existing.lastActivity = new Date();
+        }
+      }
+
+      this.logStatusIfChanged();
+      this.broadcast();
+    };
+
+    await pollCapy();
+
+    this.capyPollInterval = setInterval(() => {
+      void pollCapy();
+    }, pollIntervalMs);
+  }
+
+  stopCapyPolling(): void {
+    if (!this.capyPollInterval) return;
+    clearInterval(this.capyPollInterval);
+    this.capyPollInterval = null;
+  }
+
   getStatus(): { blocked: boolean; sessions: Session[] } {
     const sessions = Array.from(this.sessions.values());
     const working = sessions.filter((s) => s.status === "working").length;
@@ -190,6 +237,7 @@ class SessionState {
   }
 
   destroy(): void {
+    this.stopCapyPolling();
     if (this.cleanupInterval) clearInterval(this.cleanupInterval);
     this.sessions.clear();
     this.listeners.clear();
