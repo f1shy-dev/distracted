@@ -1,11 +1,24 @@
 import { defineConfig } from "wxt";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import fs from "fs/promises";
+const hasHelium = await fs
+  .access("/Applications/Helium.app")
+  .then(() => true)
+  .catch(() => false);
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   srcDir: "src",
+  webExt: {
+    chromiumArgs: ["--user-data-dir=./.wxt/chrome-data"],
+    binaries: hasHelium
+      ? {
+          chrome: "/Applications/Helium.app/Contents/MacOS/Helium",
+        }
+      : undefined,
+  },
   manifest: ({ browser }) => {
     const isFirefox = browser === "firefox";
 
