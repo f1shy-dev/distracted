@@ -6,7 +6,7 @@
 
 ## what is this package?
 
-local server that integrates with AI coding agent hooks (Claude Code + OpenCode) to enable real-time distraction blocking. receives hook events from your agent(s) and forwards them to the extension via websocket.
+local server that integrates with AI coding agent hooks (Claude Code, OpenCode, Pi) to enable real-time distraction blocking. receives hook events from your agent(s) and forwards them to the extension via websocket.
 
 ## how to use
 
@@ -26,11 +26,13 @@ you can also configure/remove hooks explicitly:
 bunx @distracted/server --setup
 bunx @distracted/server --setup claude
 bunx @distracted/server --setup opencode
+bunx @distracted/server --setup pi
 bunx @distracted/server --setup all
 
 bunx @distracted/server --remove
 bunx @distracted/server --remove claude
 bunx @distracted/server --remove opencode
+bunx @distracted/server --remove pi
 bunx @distracted/server --remove all
 
 bunx @distracted/server --status
@@ -41,16 +43,17 @@ by default the server runs on port 8765 (or use `--port <port>` to specify a dif
 configuration locations:
 
 - Claude Code: `~/.claude/settings.json` (hooks that `curl` to the local server)
-- OpenCode: `~/.config/opencode/plugin/distracted.ts` (self-contained plugin file)
+- OpenCode: `~/.config/opencode/opencode.json` (plugin reference)
+- Pi: `~/.pi/agent/settings.json` (extension reference)
 
 in the extension, setup a distraction with Claude Blocker as the unlock method.
 
 ## how it works
 
-- Claude Code hooks and/or OpenCode plugin send hook events (UserPromptSubmit, PreToolUse, SessionStart/End, etc.) to the local server via HTTP POST
+- Claude Code hooks, OpenCode plugin, and/or Pi extension send hook events (UserPromptSubmit, PreToolUse, SessionStart/End, etc.) to the local server via HTTP POST
 - the server processes these events and maintains state about agent activity across multiple sessions
 - the extension connects via websocket and receives real-time updates
-- if either agent is active/working, the user is unblocked
+- if any agent is active/working, the user is unblocked
 
 ## credits
 

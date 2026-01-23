@@ -1,0 +1,42 @@
+{
+  "name": "@distracted/pi-extension",
+  "version": "1.0.0",
+  "description": "Pi coding agent extension for distracted - enables real-time distraction blocking during AI coding sessions.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/f1shy-dev/distracted.git",
+    "directory": "packages/pi-extension"
+  },
+  "files": [
+    "README.md",
+    "src"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "lint:ci": "oxlint --format github",
+    "format": "oxfmt",
+    "knip": "knip",
+    "check": "bun run lint:fix && bun run format && bun run knip"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.49.3",
+    "@sinclair/typebox": "^0.34.33",
+    "@types/node": "^24.10.1",
+    "knip": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}
