@@ -6,6 +6,7 @@ interface UnlockState {
   siteId: string;
   expiresAt: number | null;
   mode?: "timed" | "continuous";
+  grantedAt?: number;
 }
 
 let cachedSites: BlockedSite[] = [];
@@ -77,7 +78,7 @@ export async function grantAccess(
 ): Promise<{ expiresAt: number | null }> {
   const expiresAt = mode === "continuous" ? null : Date.now() + (durationMinutes ?? 60) * 60 * 1000;
 
-  unlockedSites.set(siteId, { siteId, expiresAt, mode });
+  unlockedSites.set(siteId, { siteId, expiresAt, mode, grantedAt: Date.now() });
 
   await browser.alarms.clear(`${ALARM_PREFIX}${siteId}`);
   if (expiresAt !== null) {

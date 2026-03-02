@@ -28,6 +28,7 @@ let statsEnabled = true;
 
 const GUARD_HEARTBEAT_MS = 3000;
 const GUARD_WATCHDOG_MS = 12000;
+const GRANT_GRACE_MS = 5000;
 const guardWatchers = new Map<string, GuardWatcherHandle>();
 
 type GuardEntry = {
@@ -288,6 +289,18 @@ async function handleGuardStateUpdate(
     return;
   }
 
+  const unlockState = await getUnlockState(siteId);
+  if (
+    unlockState?.grantedAt !== undefined &&
+    Date.now() - unlockState.grantedAt < GRANT_GRACE_MS
+  ) {
+    console.log(
+      `[distracted] Guard inactive within grant grace period for ${siteId}, deferring relock`,
+    );
+    await scheduleGuardWatchdog(siteId);
+    return;
+  }
+
   const tabsToRedirect = isMV3
     ? await dnr.revokeAccess(siteId)
     : await webRequest.revokeAccess(siteId);
@@ -322,7 +335,7 @@ async function isSiteUnlocked(siteId: string): Promise<boolean> {
 
 async function getUnlockState(
   siteId: string,
-): Promise<{ siteId: string; expiresAt: number | null } | null> {
+): Promise<{ siteId: string; expiresAt: number | null; grantedAt?: number } | null> {
   if (isMV3) return dnr.getUnlockState(siteId);
   else return webRequest.getUnlockState(siteId);
 }
