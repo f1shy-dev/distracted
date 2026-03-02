@@ -431,6 +431,7 @@ const MathsChallenge = memo(
     const [feedback, setFeedback] = useState<Record<number, "correct" | "incorrect" | null>>({});
     const [completed, setCompleted] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const isAdvancingRef = useRef(false);
 
     const currentQuestion = questions[currentQuestionIndex];
     const currentAnswer = answers[currentQuestionIndex] ?? null;
@@ -439,15 +440,17 @@ const MathsChallenge = memo(
     const instantSubmit = settings.instantSubmit ?? true;
 
     const advanceQuestion = useCallback(() => {
+      if (isAdvancingRef.current) return;
+      isAdvancingRef.current = true;
+
       if (currentQuestionIndex === questions.length - 1) {
-        // Last question answered correctly
         setCompleted(true);
         setTimeout(() => {
           onComplete();
         }, 500);
       } else {
-        // Move to next question after a brief delay
         setTimeout(() => {
+          isAdvancingRef.current = false;
           setCurrentQuestionIndex((prev) => prev + 1);
         }, 500);
       }
