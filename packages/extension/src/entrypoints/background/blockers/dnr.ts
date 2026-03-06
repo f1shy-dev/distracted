@@ -6,6 +6,7 @@ interface UnlockState {
   siteId: string;
   expiresAt: number | null;
   mode?: "timed" | "continuous";
+  grantedAt?: number;
 }
 
 export async function syncDnrRules(): Promise<void> {
@@ -129,7 +130,7 @@ export async function grantAccess(
 ): Promise<{ expiresAt: number | null }> {
   const expiresAt = mode === "continuous" ? null : Date.now() + (durationMinutes ?? 60) * 60 * 1000;
 
-  const state: UnlockState = { siteId, expiresAt, mode };
+  const state: UnlockState = { siteId, expiresAt, mode, grantedAt: Date.now() };
   await browser.storage.session.set({
     [`${UNLOCK_PREFIX}${siteId}`]: state,
   });
