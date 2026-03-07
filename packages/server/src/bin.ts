@@ -17,17 +17,18 @@ function parseAgentSelection(input: unknown): AgentType[] | null {
   if (typeof input !== "string") return null;
 
   const normalized = input.trim().toLowerCase();
-  if (normalized === "all") return ["claude", "opencode"];
+  if (normalized === "all") return ["claude", "opencode", "capy"];
   if (normalized === "claude") return ["claude"];
   if (normalized === "opencode") return ["opencode"];
+  if (normalized === "capy") return ["capy"];
   return [];
 }
 
 async function main(): Promise<void> {
   const cli = cac("distracted-server");
   cli
-    .option("--setup [agent]", "Configure AI coding agent hooks (claude, opencode, all)")
-    .option("--remove [agent]", "Remove AI coding agent hooks (claude, opencode, all)")
+    .option("--setup [agent]", "Configure AI coding agent hooks (claude, opencode, capy, all)")
+    .option("--remove [agent]", "Remove AI coding agent hooks (claude, opencode, capy, all)")
     .option("--status", "Show which agents are configured")
     .option("--port <port>", `Server port (default: ${DEFAULT_PORT})`, {
       default: DEFAULT_PORT,
@@ -76,6 +77,11 @@ async function main(): Promise<void> {
         `OpenCode:    ${status.opencode ? "configured" : "not configured"}` +
         UI.Style.TEXT_NORMAL,
     );
+    UI.println(
+      UI.Style.TEXT_DIM +
+        `Capy:        ${status.capy ? "configured" : "not configured"}` +
+        UI.Style.TEXT_NORMAL,
+    );
     UI.empty();
     process.exit(0);
   }
@@ -83,7 +89,7 @@ async function main(): Promise<void> {
   if (hasSetup) {
     const agents = parseAgentSelection(options.setup);
     if (agents && agents.length === 0) {
-      UI.error("Invalid agent. Use: claude, opencode, all");
+      UI.error("Invalid agent. Use: claude, opencode, capy, all");
       process.exit(1);
     }
 
@@ -112,7 +118,7 @@ async function main(): Promise<void> {
   if (hasRemove) {
     const agents = parseAgentSelection(options.remove);
     if (agents && agents.length === 0) {
-      UI.error("Invalid agent. Use: claude, opencode, all");
+      UI.error("Invalid agent. Use: claude, opencode, capy, all");
       process.exit(1);
     }
 
@@ -139,7 +145,7 @@ async function main(): Promise<void> {
   }
 
   const status = await getSetupStatus();
-  if (!status.claude && !status.opencode) {
+  if (!status.claude && !status.opencode && !status.capy) {
     UI.println(
       UI.Style.TEXT_WARNING_BOLD + "No AI agent hooks are configured yet." + UI.Style.TEXT_NORMAL,
     );

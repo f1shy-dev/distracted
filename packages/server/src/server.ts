@@ -6,6 +6,7 @@ import { UI } from "@/lib/ui";
 import type { ClientMessage, HookPayload } from "./types";
 import { DEFAULT_PORT } from "./types";
 import { state } from "./state";
+import { isCapyConfigured } from "./setup/capy";
 
 const app = new Hono();
 
@@ -93,7 +94,7 @@ app.post("/hook", async (c) => {
       cwd: typeof data.cwd === "string" ? data.cwd : undefined,
       transcript_path: typeof data.transcript_path === "string" ? data.transcript_path : undefined,
       source:
-        data.source === "claude" || data.source === "opencode"
+        data.source === "claude" || data.source === "opencode" || data.source === "capy"
           ? (data.source as HookPayload["source"])
           : undefined,
     };
@@ -125,6 +126,12 @@ export function startServer(port: number = DEFAULT_PORT): void {
       );
       UI.println(UI.Style.TEXT_DIM + "Waiting for AI agent hooks..." + UI.Style.TEXT_NORMAL);
       UI.empty();
+
+      void isCapyConfigured().then((configured) => {
+        if (!configured) return;
+        void state.startCapyPolling(5000);
+        UI.println(UI.Style.TEXT_INFO + "Capy polling enabled" + UI.Style.TEXT_NORMAL);
+      });
     },
   );
 
