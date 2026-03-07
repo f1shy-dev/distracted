@@ -5,7 +5,7 @@ export interface HookPayload {
   tool_input?: Record<string, unknown>;
   cwd?: string;
   transcript_path?: string;
-  source?: "claude" | "opencode";
+  source?: "claude" | "opencode" | "gemini" | "cursor" | "cline" | "pi";
 }
 
 export interface Session {
@@ -28,8 +28,7 @@ export type ServerMessage =
 
 export type ClientMessage = { type: "ping" } | { type: "subscribe" };
 
-// Tools that indicate Claude is waiting for user input.
 export const USER_INPUT_TOOLS = ["AskUserQuestion", "ask_user", "ask_human"];
 
 export const DEFAULT_PORT = 8765;
-export const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+export const SESSION_TIMEOUT_MS = 5 * 60 * 1000;

@@ -1,6 +1,8 @@
+import * as p from "@clack/prompts";
+import pc from "picocolors";
+
 import type { HookPayload, ServerMessage, Session } from "./types";
 import { SESSION_TIMEOUT_MS, USER_INPUT_TOOLS } from "./types";
-import { UI } from "@/lib/ui";
 
 type StateChangeCallback = (message: ServerMessage) => void;
 type StateMessage = Extract<ServerMessage, { type: "state" }>;
@@ -32,8 +34,11 @@ class SessionState {
 
   private getStateMessage(): StateMessage {
     const sessions = Array.from(this.sessions.values());
-    const working = sessions.filter((s) => s.status === "working").length;
-    const waitingForInput = sessions.filter((s) => s.status === "waiting_for_input").length;
+    const working = sessions.filter((session) => session.status === "working").length;
+    const waitingForInput = sessions.filter(
+      (session) => session.status === "waiting_for_input",
+    ).length;
+
     return {
       type: "state",
       blocked: working === 0,
@@ -52,6 +57,7 @@ class SessionState {
       waitingForInput: message.waitingForInput,
     };
     const prev = this.lastLoggedState;
+
     if (
       prev &&
       prev.blocked === next.blocked &&
@@ -61,9 +67,13 @@ class SessionState {
     ) {
       return;
     }
+
     this.lastLoggedState = next;
-    UI.println(
-      `Status: blocked=${next.blocked ? UI.Style.TEXT_DANGER : UI.Style.TEXT_SUCCESS}${next.blocked}${UI.Style.TEXT_NORMAL} sessions=${next.sessions} working=${next.working} waiting=${next.waitingForInput}`,
+    const blockedText = next.blocked
+      ? pc.red(String(next.blocked))
+      : pc.green(String(next.blocked));
+    p.log.info(
+      `Status: blocked=${blockedText} sessions=${next.sessions} working=${next.working} waiting=${next.waitingForInput}`,
     );
   }
 
@@ -105,7 +115,6 @@ class SessionState {
           session.status = "waiting_for_input";
           session.waitingForInputSince = new Date();
         } else if (session.status === "waiting_for_input") {
-          // If waiting for input, only reset after 500ms (ignore immediate tool calls like Edit)
           const elapsed = Date.now() - (session.waitingForInputSince?.getTime() ?? 0);
           if (elapsed > 500) {
             session.status = "working";
@@ -124,7 +133,6 @@ class SessionState {
         const session = this.sessions.get(session_id)!;
 
         if (session.status === "waiting_for_input") {
-          // Ignore immediate Stop after AskUserQuestion
           const elapsed = Date.now() - (session.waitingForInputSince?.getTime() ?? 0);
           if (elapsed > 500) {
             session.status = "idle";
@@ -146,21 +154,20 @@ class SessionState {
       beforeStatus !== afterStatus
     ) {
       const toolSuffix = payload.tool_name ? ` tool=${payload.tool_name}` : "";
-      UI.println(
-        UI.Style.TEXT_DIM +
-          `Hook: ${hook_event_name} session=${session_id}` +
-          toolSuffix +
-          ` status=${afterStatus ?? "none"}` +
-          UI.Style.TEXT_NORMAL,
+      p.log.step(
+        pc.dim(
+          `Hook: ${hook_event_name} session=${session_id}${toolSuffix} status=${afterStatus ?? "none"}`,
+        ),
       );
     }
-    this.logStatusIfChanged();
 
+    this.logStatusIfChanged();
     this.broadcast();
   }
 
   private ensureSession(sessionId: string, cwd?: string): void {
     if (this.sessions.has(sessionId)) return;
+
     this.sessions.set(sessionId, {
       id: sessionId,
       status: "idle",
@@ -176,16 +183,19 @@ class SessionState {
     for (const [id, session] of this.sessions) {
       if (now - session.lastActivity.getTime() > SESSION_TIMEOUT_MS) {
         this.sessions.delete(id);
-        removed++;
+        removed += 1;
       }
     }
 
-    if (removed > 0) this.broadcast();
+    if (removed > 0) {
+      this.broadcast();
+      this.logStatusIfChanged();
+    }
   }
 
   getStatus(): { blocked: boolean; sessions: Session[] } {
     const sessions = Array.from(this.sessions.values());
-    const working = sessions.filter((s) => s.status === "working").length;
+    const working = sessions.filter((session) => session.status === "working").length;
     return { blocked: working === 0, sessions };
   }
 

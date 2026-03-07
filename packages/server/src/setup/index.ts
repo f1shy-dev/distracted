@@ -1,162 +1,135 @@
-import { emitKeypressEvents } from "node:readline";
+import * as p from "@clack/prompts";
+import pc from "picocolors";
 
-import { UI } from "@/lib/ui";
-
-type AgentType = "claude" | "opencode";
-
-type SetupStatus = {
-  claude: boolean;
-  opencode: boolean;
-};
 import { isClaudeConfigured, removeClaude, setupClaude } from "./claude";
+import { isClineConfigured, removeCline, setupCline } from "./cline";
+import { isCursorConfigured, removeCursor, setupCursor } from "./cursor";
+import { isGeminiConfigured, removeGemini, setupGemini } from "./gemini";
 import { isOpenCodeConfigured, removeOpenCode, setupOpenCode } from "./opencode";
 
-const AGENT_OPTIONS: { id: AgentType; label: string }[] = [
-  { id: "claude", label: "Claude Code (~/.claude/settings.json hooks)" },
-  { id: "opencode", label: "OpenCode (~/.config/opencode/plugin/)" },
+export type AgentType = "claude" | "opencode" | "gemini" | "cursor" | "cline";
+
+type SetupStatus = Record<AgentType, boolean>;
+
+const AGENT_OPTIONS: { id: AgentType; label: string; description: string }[] = [
+  { id: "claude", label: "Claude Code", description: "~/.claude/settings.json hooks" },
+  { id: "opencode", label: "OpenCode", description: "~/.config/opencode/plugin/" },
+  { id: "gemini", label: "Gemini CLI", description: "~/.gemini/settings.json hooks" },
+  { id: "cursor", label: "Cursor", description: "~/.cursor/hooks.json" },
+  { id: "cline", label: "Cline", description: "~/Documents/Cline/Rules/Hooks/ scripts" },
 ];
 
 async function selectAgents(prompt: string, defaultSelected: AgentType[]): Promise<AgentType[]> {
-  if (!process.stdin.isTTY) {
-    UI.println(UI.Style.TEXT_DIM + "Non-interactive shell detected." + UI.Style.TEXT_NORMAL);
-    return [];
+  const result = await p.multiselect({
+    message: prompt,
+    options: AGENT_OPTIONS.map((option) => ({
+      value: option.id,
+      label: option.label,
+      hint: option.description,
+    })),
+    initialValues: defaultSelected,
+    required: true,
+  });
+
+  if (p.isCancel(result)) {
+    p.cancel("Cancelled.");
+    process.exit(0);
   }
 
-  let cursor = 0;
-  const selected = new Set<AgentType>(defaultSelected);
-
-  const render = () => {
-    process.stderr.write("\x1b[2J\x1b[H");
-    UI.println(prompt);
-    UI.empty();
-
-    for (let i = 0; i < AGENT_OPTIONS.length; i++) {
-      const opt = AGENT_OPTIONS[i];
-      const isSelected = selected.has(opt.id);
-      const prefix = i === cursor ? UI.Style.TEXT_HIGHLIGHT_BOLD + ">" + UI.Style.TEXT_NORMAL : " ";
-      const checkbox = isSelected ? "[x]" : "[ ]";
-      UI.println(`${prefix} ${checkbox} ${opt.label}`);
-    }
-
-    UI.empty();
-    UI.println(
-      UI.Style.TEXT_DIM +
-        "Use ↑/↓ to move, space to toggle, enter to confirm" +
-        UI.Style.TEXT_NORMAL,
-    );
-  };
-
-  emitKeypressEvents(process.stdin);
-  const previousRawMode = process.stdin.isRaw ?? false;
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
-
-  render();
-
-  return new Promise((resolve, reject) => {
-    const onKeypress = (_str: string, key: { name?: string; ctrl?: boolean }) => {
-      if (key.ctrl && key.name === "c") {
-        cleanup();
-        reject(new UI.CancelledError(undefined));
-        return;
-      }
-
-      if (key.name === "up") {
-        cursor = (cursor - 1 + AGENT_OPTIONS.length) % AGENT_OPTIONS.length;
-        render();
-        return;
-      }
-
-      if (key.name === "down") {
-        cursor = (cursor + 1) % AGENT_OPTIONS.length;
-        render();
-        return;
-      }
-
-      if (key.name === "space") {
-        const id = AGENT_OPTIONS[cursor].id;
-        if (selected.has(id)) selected.delete(id);
-        else selected.add(id);
-        render();
-        return;
-      }
-
-      if (key.name === "return") {
-        const result = Array.from(selected);
-        if (result.length === 0) {
-          render();
-          UI.empty();
-          UI.println(
-            UI.Style.TEXT_WARNING_BOLD + "Select at least one agent." + UI.Style.TEXT_NORMAL,
-          );
-          return;
-        }
-        cleanup();
-        resolve(result);
-      }
-    };
-
-    const cleanup = () => {
-      process.stdin.off("keypress", onKeypress);
-      process.stdin.setRawMode(previousRawMode);
-      process.stdin.pause();
-      process.stderr.write("\x1b[2J\x1b[H");
-    };
-
-    process.stdin.on("keypress", onKeypress);
-  });
+  return result as AgentType[];
 }
 
 export async function getSetupStatus(): Promise<SetupStatus> {
-  const [claude, opencode] = await Promise.all([isClaudeConfigured(), isOpenCodeConfigured()]);
-  return { claude, opencode };
+  const [claude, opencode, gemini, cursor, cline] = await Promise.all([
+    isClaudeConfigured(),
+    isOpenCodeConfigured(),
+    isGeminiConfigured(),
+    isCursorConfigured(),
+    isClineConfigured(),
+  ]);
+
+  return { claude, opencode, gemini, cursor, cline };
 }
 
 export async function setupAgent(agent: AgentType, port: number): Promise<void> {
-  if (agent === "claude") {
-    await setupClaude(port);
-    return;
+  switch (agent) {
+    case "claude":
+      await setupClaude(port);
+      break;
+    case "opencode":
+      await setupOpenCode(port);
+      break;
+    case "gemini":
+      await setupGemini(port);
+      break;
+    case "cursor":
+      await setupCursor(port);
+      break;
+    case "cline":
+      await setupCline(port);
+      break;
   }
-  await setupOpenCode(port);
 }
 
 export async function removeAgent(agent: AgentType): Promise<void> {
-  if (agent === "claude") {
-    await removeClaude();
-    return;
+  switch (agent) {
+    case "claude":
+      await removeClaude();
+      break;
+    case "opencode":
+      await removeOpenCode();
+      break;
+    case "gemini":
+      await removeGemini();
+      break;
+    case "cursor":
+      await removeCursor();
+      break;
+    case "cline":
+      await removeCline();
+      break;
   }
-  await removeOpenCode();
 }
 
-export async function interactiveSetup(port: number): Promise<void> {
+export async function interactiveSetup(port: number): Promise<boolean> {
+  if (!process.stdin.isTTY) {
+    p.log.warn(`Non-interactive shell detected. ${pc.dim("Use --setup <agent> or --setup all")}`);
+    return false;
+  }
+
   const agents = await selectAgents(
-    "? Select AI coding agent(s) to configure:",
-    AGENT_OPTIONS.map((o) => o.id),
+    "Select AI coding agent(s) to configure:",
+    AGENT_OPTIONS.map((option) => option.id),
   );
 
   for (const agent of agents) {
     await setupAgent(agent, port);
   }
+
+  return true;
 }
 
-export async function interactiveRemove(): Promise<void> {
+export async function interactiveRemove(): Promise<boolean> {
   const status = await getSetupStatus();
-  const defaultSelected = AGENT_OPTIONS.filter((o) => status[o.id]).map((o) => o.id);
+  const defaultSelected = AGENT_OPTIONS.filter((option) => status[option.id]).map(
+    (option) => option.id,
+  );
 
   if (defaultSelected.length === 0) {
-    UI.println(UI.Style.TEXT_DIM + "No agents are configured." + UI.Style.TEXT_NORMAL);
-    return;
+    p.log.info("No agents are configured.");
+    return false;
   }
 
   if (!process.stdin.isTTY) {
-    UI.println(UI.Style.TEXT_DIM + "Non-interactive shell detected." + UI.Style.TEXT_NORMAL);
-    UI.println("Run with '--remove claude', '--remove opencode', or '--remove all'.");
-    return;
+    p.log.warn(`Non-interactive shell detected. ${pc.dim("Use --remove <agent> or --remove all")}`);
+    return false;
   }
 
-  const agents = await selectAgents("? Select AI coding agent(s) to remove:", defaultSelected);
+  const agents = await selectAgents("Select AI coding agent(s) to remove:", defaultSelected);
 
   for (const agent of agents) {
     await removeAgent(agent);
   }
+
+  return true;
 }
