@@ -1,0 +1,43 @@
+{
+  "name": "@distracted/pi",
+  "version": "1.0.0",
+  "description": "Pi (oh-my-pi) extension for distracted's AI Coding Agent integration",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/f1shy-dev/distracted.git",
+    "directory": "packages/pi"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node",
+    "dev": "bun run src/index.ts",
+    "lint": "oxlint --type-aware --type-check",
+    "lint:fix": "oxlint --type-aware --type-check --fix",
+    "lint:ci": "oxlint --type-aware --type-check --format github",
+    "format": "oxfmt",
+    "knip": "knip",
+    "check": "bun run lint:fix && bun run format && bun run knip"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "bun-types": "^1.2.0",
+    "knip": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "@oh-my-pi/pi-coding-agent": "*"
+  }
+}

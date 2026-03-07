@@ -1,19 +1,22 @@
 import { emitKeypressEvents } from "node:readline";
 
 import { UI } from "@/lib/ui";
+import { isClaudeConfigured, removeClaude, setupClaude } from "./claude";
+import { isOpenCodeConfigured, removeOpenCode, setupOpenCode } from "./opencode";
+import { isPiConfigured, removePi, setupPi } from "./pi";
 
-type AgentType = "claude" | "opencode";
+type AgentType = "claude" | "opencode" | "pi";
 
 type SetupStatus = {
   claude: boolean;
   opencode: boolean;
+  pi: boolean;
 };
-import { isClaudeConfigured, removeClaude, setupClaude } from "./claude";
-import { isOpenCodeConfigured, removeOpenCode, setupOpenCode } from "./opencode";
 
 const AGENT_OPTIONS: { id: AgentType; label: string }[] = [
   { id: "claude", label: "Claude Code (~/.claude/settings.json hooks)" },
   { id: "opencode", label: "OpenCode (~/.config/opencode/plugin/)" },
+  { id: "pi", label: "Pi (~/.omp/agent/extensions/ module)" },
 ];
 
 async function selectAgents(prompt: string, defaultSelected: AgentType[]): Promise<AgentType[]> {
@@ -108,8 +111,12 @@ async function selectAgents(prompt: string, defaultSelected: AgentType[]): Promi
 }
 
 export async function getSetupStatus(): Promise<SetupStatus> {
-  const [claude, opencode] = await Promise.all([isClaudeConfigured(), isOpenCodeConfigured()]);
-  return { claude, opencode };
+  const [claude, opencode, pi] = await Promise.all([
+    isClaudeConfigured(),
+    isOpenCodeConfigured(),
+    isPiConfigured(),
+  ]);
+  return { claude, opencode, pi };
 }
 
 export async function setupAgent(agent: AgentType, port: number): Promise<void> {
@@ -117,7 +124,11 @@ export async function setupAgent(agent: AgentType, port: number): Promise<void> 
     await setupClaude(port);
     return;
   }
-  await setupOpenCode(port);
+  if (agent === "opencode") {
+    await setupOpenCode(port);
+    return;
+  }
+  await setupPi(port);
 }
 
 export async function removeAgent(agent: AgentType): Promise<void> {
@@ -125,7 +136,11 @@ export async function removeAgent(agent: AgentType): Promise<void> {
     await removeClaude();
     return;
   }
-  await removeOpenCode();
+  if (agent === "opencode") {
+    await removeOpenCode();
+    return;
+  }
+  await removePi();
 }
 
 export async function interactiveSetup(port: number): Promise<void> {
@@ -150,7 +165,9 @@ export async function interactiveRemove(): Promise<void> {
 
   if (!process.stdin.isTTY) {
     UI.println(UI.Style.TEXT_DIM + "Non-interactive shell detected." + UI.Style.TEXT_NORMAL);
-    UI.println("Run with '--remove claude', '--remove opencode', or '--remove all'.");
+    UI.println(
+      "Run with '--remove claude', '--remove opencode', '--remove pi', or '--remove all'.",
+    );
     return;
   }
 
