@@ -1,178 +1,175 @@
-import { cac } from "cac";
+import * as p from "@clack/prompts";
+import pc from "picocolors";
+
 import { UI } from "@/lib/ui";
-import { DEFAULT_PORT } from "./types";
+import { startServer } from "./server";
 import {
   getSetupStatus,
   interactiveRemove,
   interactiveSetup,
   removeAgent,
   setupAgent,
+  type AgentType,
 } from "./setup/index";
-import { startServer } from "./server";
+import { DEFAULT_PORT } from "./types";
 
-type AgentType = Parameters<typeof setupAgent>[0];
+const ALL_AGENTS: AgentType[] = ["claude", "opencode", "gemini", "cursor", "cline"];
 
-function parseAgentSelection(input: unknown): AgentType[] | null {
-  if (input === true || input === undefined) return null;
-  if (typeof input !== "string") return null;
+const args = process.argv.slice(2);
+
+function getFlag(name: string): boolean {
+  return args.includes(`--${name}`) || args.some((arg) => arg.startsWith(`--${name}=`));
+}
+
+function getFlagValue(name: string): string | undefined {
+  const equalsArg = args.find((arg) => arg.startsWith(`--${name}=`));
+  if (equalsArg) {
+    const value = equalsArg.slice(`--${name}=`.length);
+    return value.length > 0 ? value : undefined;
+  }
+
+  const idx = args.indexOf(`--${name}`);
+  if (idx < 0) return undefined;
+  const value = args[idx + 1];
+  if (!value || value.startsWith("--")) return undefined;
+  return value;
+}
+
+function showHelp(): void {
+  p.log.info("Usage: bunx @distracted/server [options]");
+  p.log.info("  --setup [agent]   Configure hooks (claude, opencode, gemini, cursor, cline, all)");
+  p.log.info("  --remove [agent]  Remove hooks (claude, opencode, gemini, cursor, cline, all)");
+  p.log.info("  --status          Show configured hook status");
+  p.log.info(`  --port <port>     Server port (default: ${DEFAULT_PORT})`);
+  p.log.info("  --help            Show help");
+}
+
+function parseAgentSelection(input: string | undefined): AgentType[] | null {
+  if (!input) return null;
 
   const normalized = input.trim().toLowerCase();
-  if (normalized === "all") return ["claude", "opencode"];
-  if (normalized === "claude") return ["claude"];
-  if (normalized === "opencode") return ["opencode"];
-  return [];
+  if (normalized === "all") {
+    return [...ALL_AGENTS];
+  }
+
+  const parts = normalized
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) return [];
+
+  const values = new Set<AgentType>();
+  for (const part of parts) {
+    if (ALL_AGENTS.includes(part as AgentType)) {
+      values.add(part as AgentType);
+    } else {
+      return [];
+    }
+  }
+
+  return [...values];
 }
 
 async function main(): Promise<void> {
-  const cli = cac("distracted-server");
-  cli
-    .option("--setup [agent]", "Configure AI coding agent hooks (claude, opencode, all)")
-    .option("--remove [agent]", "Remove AI coding agent hooks (claude, opencode, all)")
-    .option("--status", "Show which agents are configured")
-    .option("--port <port>", `Server port (default: ${DEFAULT_PORT})`, {
-      default: DEFAULT_PORT,
-    })
-    .help();
-
-  const parsed = cli.parse();
-  const options = parsed.options as {
-    setup?: unknown;
-    remove?: unknown;
-    status?: boolean;
-    port: unknown;
-    help?: boolean;
-  };
-
-  if (options.help) {
-    process.exit(0);
+  const hasHelp = getFlag("help") || args.includes("-h");
+  if (hasHelp) {
+    showHelp();
+    return;
   }
 
-  const port = Number(options.port);
+  const portValue = getFlagValue("port");
+  const port = Number(portValue ?? DEFAULT_PORT);
   if (!Number.isFinite(port) || port <= 0 || port >= 65536) {
-    UI.error("Invalid port number");
+    UI.error("Invalid port number.");
     process.exit(1);
   }
 
-  const hasSetup = options.setup !== undefined;
-  const hasRemove = options.remove !== undefined;
-  const hasStatus = options.status === true;
+  const hasSetup = getFlag("setup");
+  const hasRemove = getFlag("remove");
+  const hasStatus = getFlag("status");
 
   const modeCount = [hasSetup, hasRemove, hasStatus].filter(Boolean).length;
   if (modeCount > 1) {
-    UI.error("Use only one of --setup, --remove, or --status");
+    UI.error("Use only one of --setup, --remove, or --status.");
     process.exit(1);
   }
 
   if (hasStatus) {
     const status = await getSetupStatus();
-    UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Setup status" + UI.Style.TEXT_NORMAL);
-    UI.println(
-      UI.Style.TEXT_DIM +
-        `Claude Code: ${status.claude ? "configured" : "not configured"}` +
-        UI.Style.TEXT_NORMAL,
-    );
-    UI.println(
-      UI.Style.TEXT_DIM +
-        `OpenCode:    ${status.opencode ? "configured" : "not configured"}` +
-        UI.Style.TEXT_NORMAL,
-    );
-    UI.empty();
-    process.exit(0);
+    p.log.info(pc.bold("Setup status"));
+
+    for (const agent of ALL_AGENTS) {
+      p.log.info(
+        `${agent.padEnd(8)} ${status[agent] ? pc.green("configured") : pc.yellow("not configured")}`,
+      );
+    }
+    return;
   }
 
   if (hasSetup) {
-    const agents = parseAgentSelection(options.setup);
+    const agents = parseAgentSelection(getFlagValue("setup"));
     if (agents && agents.length === 0) {
-      UI.error("Invalid agent. Use: claude, opencode, all");
+      UI.error("Invalid agent. Use: claude, opencode, gemini, cursor, cline, all.");
       process.exit(1);
     }
 
+    p.intro(pc.bgCyan(pc.black(" distracted ")));
     if (!agents) {
-      try {
-        await interactiveSetup(port);
-      } catch (err) {
-        if (err instanceof Error && err.name === "UICancelledError") {
-          UI.empty();
-          UI.println(UI.Style.TEXT_DIM + "Cancelled." + UI.Style.TEXT_NORMAL);
-          UI.empty();
-        } else {
-          throw err;
-        }
+      await interactiveSetup(port);
+    } else {
+      for (const agent of agents) {
+        await setupAgent(agent, port);
       }
-      process.exit(0);
     }
-
-    for (const agent of agents) {
-      await setupAgent(agent, port);
-    }
-
-    process.exit(0);
+    p.outro("Done! Run 'bunx @distracted/server' to start.");
+    return;
   }
 
   if (hasRemove) {
-    const agents = parseAgentSelection(options.remove);
+    const agents = parseAgentSelection(getFlagValue("remove"));
     if (agents && agents.length === 0) {
-      UI.error("Invalid agent. Use: claude, opencode, all");
+      UI.error("Invalid agent. Use: claude, opencode, gemini, cursor, cline, all.");
       process.exit(1);
     }
 
+    p.intro(pc.bgCyan(pc.black(" distracted ")));
     if (!agents) {
-      try {
-        await interactiveRemove();
-      } catch (err) {
-        if (err instanceof Error && err.name === "UICancelledError") {
-          UI.empty();
-          UI.println(UI.Style.TEXT_DIM + "Cancelled." + UI.Style.TEXT_NORMAL);
-          UI.empty();
-        } else {
-          throw err;
-        }
+      await interactiveRemove();
+    } else {
+      for (const agent of agents) {
+        await removeAgent(agent);
       }
-      process.exit(0);
     }
-
-    for (const agent of agents) {
-      await removeAgent(agent);
-    }
-
-    process.exit(0);
+    p.outro("Hook cleanup complete.");
+    return;
   }
 
   const status = await getSetupStatus();
-  if (!status.claude && !status.opencode) {
-    UI.println(
-      UI.Style.TEXT_WARNING_BOLD + "No AI agent hooks are configured yet." + UI.Style.TEXT_NORMAL,
-    );
-    UI.empty();
+  const hasConfiguredAgent = ALL_AGENTS.some((agent) => status[agent]);
+
+  if (!hasConfiguredAgent) {
+    p.log.warn("No AI agent hooks configured.");
 
     if (!process.stdin.isTTY) {
-      UI.println(
-        UI.Style.TEXT_DIM +
-          "Non-interactive shell detected; skipping setup prompt." +
-          UI.Style.TEXT_NORMAL,
-      );
-      UI.println("Run 'bunx @distracted/server --setup' to configure hooks.");
-      UI.empty();
+      p.log.info(pc.dim("Non-interactive shell detected; skipping setup prompt."));
+      p.log.info("Run 'bunx @distracted/server --setup' to configure hooks.");
     } else {
-      const answer = await UI.input("Would you like to set them up now? (Y/n) ");
-      const normalized = answer.trim().toLowerCase();
-      if (normalized === "" || normalized === "y" || normalized === "yes") {
-        try {
-          await interactiveSetup(port);
-        } catch (err) {
-          if (err instanceof Error && err.name === "UICancelledError") {
-            UI.empty();
-            UI.println(UI.Style.TEXT_DIM + "Cancelled." + UI.Style.TEXT_NORMAL);
-            UI.empty();
-          } else {
-            throw err;
-          }
-        }
-        UI.empty();
+      const shouldSetup = await p.confirm({
+        message: "No AI agent hooks configured. Set them up now?",
+      });
+
+      if (p.isCancel(shouldSetup)) {
+        p.cancel("Cancelled.");
+        process.exit(0);
+      }
+
+      if (shouldSetup) {
+        p.intro(pc.bgCyan(pc.black(" distracted ")));
+        await interactiveSetup(port);
+        p.outro("Setup complete.");
       } else {
-        UI.empty();
-        UI.println("Skipping setup. You can run 'bunx @distracted/server --setup' later.");
-        UI.empty();
+        p.log.info("Skipping setup. You can run 'bunx @distracted/server --setup' later.");
       }
     }
   }

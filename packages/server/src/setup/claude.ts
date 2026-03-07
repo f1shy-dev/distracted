@@ -1,9 +1,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+
+import * as p from "@clack/prompts";
+import pc from "picocolors";
 import { z } from "zod";
 
-import { UI } from "@/lib/ui";
 import { DEFAULT_PORT } from "../types";
 
 const ClaudeSettingsSchema = z
@@ -74,35 +76,32 @@ export async function setupClaude(port: number = DEFAULT_PORT): Promise<void> {
 
   await writeFile(settingsPath, JSON.stringify(settings, null, 2));
 
-  UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Claude Code hooks configured." + UI.Style.TEXT_NORMAL);
-  UI.println(UI.Style.TEXT_DIM + `Path: ${settingsPath}` + UI.Style.TEXT_NORMAL);
-  UI.println(UI.Style.TEXT_DIM + `Port: ${port}` + UI.Style.TEXT_NORMAL);
-  UI.println(UI.Style.TEXT_DIM + "Next: Run 'bunx @distracted/server'" + UI.Style.TEXT_NORMAL);
-  UI.empty();
+  p.log.success("Claude Code hooks configured.");
+  p.log.info(`Path: ${pc.dim(settingsPath)}`);
+  p.log.info(`Port: ${pc.dim(String(port))}`);
+  p.log.info(`Next: ${pc.dim("Run 'bunx @distracted/server'")}`);
 }
 
 export async function isClaudeConfigured(): Promise<boolean> {
   const settingsPath = join(homedir(), ".claude", "settings.json");
   const settings = await readClaudeSettings(settingsPath);
-  if (!settings) return false;
-  if (!settings.hooks) return false;
+  if (!settings || !settings.hooks) return false;
 
-  const hooks = settings.hooks;
   const keys = Object.keys(makeHooksConfig(DEFAULT_PORT));
-  return keys.some((hookName) => hookName in hooks);
+  return keys.some((hookName) => hookName in settings.hooks!);
 }
 
 export async function removeClaude(): Promise<void> {
   const settingsPath = join(homedir(), ".claude", "settings.json");
   const settings = await readClaudeSettings(settingsPath);
+
   if (!settings) {
-    UI.println(
-      UI.Style.TEXT_DIM + "No settings.json found, nothing to remove." + UI.Style.TEXT_NORMAL,
-    );
+    p.log.info("No settings.json found, nothing to remove.");
     return;
   }
+
   if (!settings.hooks) {
-    UI.println(UI.Style.TEXT_DIM + "No hooks found in settings.json" + UI.Style.TEXT_NORMAL);
+    p.log.info("No hooks found in settings.json.");
     return;
   }
 
@@ -115,7 +114,6 @@ export async function removeClaude(): Promise<void> {
   }
 
   await writeFile(settingsPath, JSON.stringify(settings, null, 2));
-  UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Claude Code hooks removed." + UI.Style.TEXT_NORMAL);
-  UI.println(UI.Style.TEXT_DIM + `Path: ${settingsPath}` + UI.Style.TEXT_NORMAL);
-  UI.empty();
+  p.log.success("Claude Code hooks removed.");
+  p.log.info(`Path: ${pc.dim(settingsPath)}`);
 }

@@ -1,14 +1,15 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
+import * as p from "@clack/prompts";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
-import { UI } from "@/lib/ui";
+import pc from "picocolors";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+
 import type { ClientMessage, HookPayload } from "./types";
 import { DEFAULT_PORT } from "./types";
 import { state } from "./state";
 
 const app = new Hono();
-
 const nodeWs = createNodeWebSocket({ app });
 
 app.use("*", cors());
@@ -16,10 +17,10 @@ app.use("*", cors());
 app.get(
   "/ws",
   nodeWs.upgradeWebSocket(() => {
-    let unsubscribe: (() => void) | undefined = undefined;
+    let unsubscribe: (() => void) | undefined;
 
     return {
-      onOpen(evt, ws) {
+      onOpen(_evt, ws) {
         unsubscribe = state.subscribe((message) => {
           ws.send(JSON.stringify(message));
         });
@@ -34,17 +35,17 @@ app.get(
           if (message.type === "ping") {
             ws.send(JSON.stringify({ type: "pong" }));
           }
-        } catch {
-          // ignore invalid messages
-        }
+        } catch {}
       },
       onClose: () => {
-        UI.println(UI.Style.TEXT_DIM + "Extension disconnected" + UI.Style.TEXT_NORMAL);
+        p.log.info(pc.dim("Extension disconnected"));
         unsubscribe?.();
       },
       onError: (event) => {
-        UI.println(UI.Style.TEXT_DANGER_BOLD + "WebSocket error" + UI.Style.TEXT_NORMAL);
-        UI.println(event instanceof Error ? (event.stack ?? event.message) : JSON.stringify(event));
+        p.log.error("WebSocket error");
+        p.log.error(
+          event instanceof Error ? (event.stack ?? event.message) : JSON.stringify(event),
+        );
         unsubscribe?.();
       },
     };
@@ -78,6 +79,7 @@ app.post("/hook", async (c) => {
       "SessionStart",
       "SessionEnd",
     ];
+
     if (!allowedEvents.includes(data.hook_event_name as HookPayload["hook_event_name"])) {
       return c.json({ error: "Invalid payload" }, 400);
     }
@@ -92,10 +94,11 @@ app.post("/hook", async (c) => {
           : undefined,
       cwd: typeof data.cwd === "string" ? data.cwd : undefined,
       transcript_path: typeof data.transcript_path === "string" ? data.transcript_path : undefined,
-      source:
-        data.source === "claude" || data.source === "opencode"
-          ? (data.source as HookPayload["source"])
-          : undefined,
+      source: ["claude", "opencode", "gemini", "cursor", "cline", "pi"].includes(
+        data.source as string,
+      )
+        ? (data.source as HookPayload["source"])
+        : undefined,
     };
 
     state.handleHook(payload);
@@ -116,23 +119,20 @@ export function startServer(port: number = DEFAULT_PORT): void {
       port,
     },
     (info) => {
-      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Distracted Server" + UI.Style.TEXT_NORMAL);
-      UI.println(
-        UI.Style.TEXT_INFO + `HTTP:      http://localhost:${info.port}` + UI.Style.TEXT_NORMAL,
+      p.note(
+        `HTTP:      ${pc.cyan(`http://localhost:${info.port}`)}\nWebSocket: ${pc.cyan(
+          `ws://localhost:${info.port}/ws`,
+        )}`,
+        pc.bold("Distracted Server"),
       );
-      UI.println(
-        UI.Style.TEXT_INFO + `WebSocket: ws://localhost:${info.port}/ws` + UI.Style.TEXT_NORMAL,
-      );
-      UI.println(UI.Style.TEXT_DIM + "Waiting for AI agent hooks..." + UI.Style.TEXT_NORMAL);
-      UI.empty();
+      p.log.info(pc.dim("Waiting for AI agent hooks..."));
     },
   );
 
   nodeWs.injectWebSocket(server);
 
   process.once("SIGINT", () => {
-    UI.empty();
-    UI.println(UI.Style.TEXT_DIM + "Shutting down..." + UI.Style.TEXT_NORMAL);
+    p.log.info(pc.dim("Shutting down..."));
     try {
       state.destroy();
       server.close();
