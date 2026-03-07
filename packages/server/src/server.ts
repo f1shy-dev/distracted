@@ -93,7 +93,7 @@ app.post("/hook", async (c) => {
       cwd: typeof data.cwd === "string" ? data.cwd : undefined,
       transcript_path: typeof data.transcript_path === "string" ? data.transcript_path : undefined,
       source:
-        data.source === "claude" || data.source === "opencode"
+        data.source === "claude" || data.source === "opencode" || data.source === "pi"
           ? (data.source as HookPayload["source"])
           : undefined,
     };
