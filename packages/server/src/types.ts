@@ -5,7 +5,7 @@ export interface HookPayload {
   tool_input?: Record<string, unknown>;
   cwd?: string;
   transcript_path?: string;
-  source?: "claude" | "opencode";
+  source?: "claude" | "opencode" | "pi";
 }
 
 export interface Session {
