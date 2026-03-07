@@ -91,10 +91,10 @@ export async function removeAgent(agent: AgentType): Promise<void> {
   }
 }
 
-export async function interactiveSetup(port: number): Promise<void> {
+export async function interactiveSetup(port: number): Promise<boolean> {
   if (!process.stdin.isTTY) {
     p.log.warn(`Non-interactive shell detected. ${pc.dim("Use --setup <agent> or --setup all")}`);
-    return;
+    return false;
   }
 
   const agents = await selectAgents(
@@ -105,9 +105,11 @@ export async function interactiveSetup(port: number): Promise<void> {
   for (const agent of agents) {
     await setupAgent(agent, port);
   }
+
+  return true;
 }
 
-export async function interactiveRemove(): Promise<void> {
+export async function interactiveRemove(): Promise<boolean> {
   const status = await getSetupStatus();
   const defaultSelected = AGENT_OPTIONS.filter((option) => status[option.id]).map(
     (option) => option.id,
@@ -115,12 +117,12 @@ export async function interactiveRemove(): Promise<void> {
 
   if (defaultSelected.length === 0) {
     p.log.info("No agents are configured.");
-    return;
+    return false;
   }
 
   if (!process.stdin.isTTY) {
     p.log.warn(`Non-interactive shell detected. ${pc.dim("Use --remove <agent> or --remove all")}`);
-    return;
+    return false;
   }
 
   const agents = await selectAgents("Select AI coding agent(s) to remove:", defaultSelected);
@@ -128,4 +130,6 @@ export async function interactiveRemove(): Promise<void> {
   for (const agent of agents) {
     await removeAgent(agent);
   }
+
+  return true;
 }

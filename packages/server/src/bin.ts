@@ -78,7 +78,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  const hasPort = getFlag("port");
   const portValue = getFlagValue("port");
+  if (hasPort && portValue === undefined) {
+    UI.error("--port requires a value.");
+    process.exit(1);
+  }
+
   const port = Number(portValue ?? DEFAULT_PORT);
   if (!Number.isFinite(port) || port <= 0 || port >= 65536) {
     UI.error("Invalid port number.");
@@ -116,13 +122,16 @@ async function main(): Promise<void> {
 
     p.intro(pc.bgCyan(pc.black(" distracted ")));
     if (!agents) {
-      await interactiveSetup(port);
+      const didSetup = await interactiveSetup(port);
+      if (didSetup) {
+        p.outro("Done! Run 'bunx @distracted/server' to start.");
+      }
     } else {
       for (const agent of agents) {
         await setupAgent(agent, port);
       }
+      p.outro("Done! Run 'bunx @distracted/server' to start.");
     }
-    p.outro("Done! Run 'bunx @distracted/server' to start.");
     return;
   }
 
@@ -135,13 +144,16 @@ async function main(): Promise<void> {
 
     p.intro(pc.bgCyan(pc.black(" distracted ")));
     if (!agents) {
-      await interactiveRemove();
+      const didRemove = await interactiveRemove();
+      if (didRemove) {
+        p.outro("Hook cleanup complete.");
+      }
     } else {
       for (const agent of agents) {
         await removeAgent(agent);
       }
+      p.outro("Hook cleanup complete.");
     }
-    p.outro("Hook cleanup complete.");
     return;
   }
 
@@ -166,8 +178,10 @@ async function main(): Promise<void> {
 
       if (shouldSetup) {
         p.intro(pc.bgCyan(pc.black(" distracted ")));
-        await interactiveSetup(port);
-        p.outro("Setup complete.");
+        const didSetup = await interactiveSetup(port);
+        if (didSetup) {
+          p.outro("Setup complete.");
+        }
       } else {
         p.log.info("Skipping setup. You can run 'bunx @distracted/server --setup' later.");
       }
